@@ -1,32 +1,50 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.io import wavfile
+from scipy.signal import spectrogram
 
-# путь к вашему файлу
+# путь к файлу
 path = "voice_examples/Девушка1 WAV .wav"
 
 # загрузка
 sample_rate, data = wavfile.read(path)
-
-# если стерео — берём один канал
 if len(data.shape) > 1:
     data = data[:, 0]
 
-# вычисление FFT
-N = len(data)
-spectrum = np.fft.fft(data)
-freq = np.fft.fftfreq(N, d=1/sample_rate)
+# Параметры для максимальной детализации
+nperseg = 4096
+noverlap = int(nperseg * 0.9)
+freq_limit = 15000  # ограничение частоты
 
-# берём только положительные частоты
-idx = np.where(freq >= 0)
-freq = freq[idx]
-spectrum = np.abs(spectrum[idx])
+# вычисление спектрограммы
+f, t, Sxx = spectrogram(
+    data,
+    fs=sample_rate,
+    window='hann',
+    nperseg=nperseg,
+    noverlap=noverlap,
+    scaling='density',
+    mode='magnitude'
+)
 
-# график
-plt.figure(figsize=(12, 6))
-plt.plot(freq, spectrum)
-plt.xlabel("Частота (Гц)")
-plt.ylabel("Амплитуда")
-plt.title("Спектр WAV-сигнала")
-plt.grid(True)
+# ограничение частоты
+mask = f <= freq_limit
+f = f[mask]
+Sxx = Sxx[mask, :]
+
+# перевод в dB
+Sxx_dB = 20 * np.log10(Sxx + 1e-10)
+
+# ограничение динамического диапазона (например, -120…0 dB)
+Sxx_dB = np.clip(Sxx_dB, -50, 0)
+
+# визуализация
+plt.figure(figsize=(14, 7))
+plt.pcolormesh(t, f, Sxx_dB, shading='gouraud', cmap='inferno')
+plt.ylabel("Частота (Гц)")
+plt.xlabel("Время (с)")
+plt.title("Максимально информативная спектрограмма (логарифмическая амплитуда)")
+plt.colorbar(label="Амплитуда (dB)")
+plt.ylim(0, freq_limit)
+plt.tight_layout()
 plt.show()
