@@ -3,42 +3,58 @@ import matplotlib.pyplot as plt
 from scipy.io import wavfile
 from scipy.signal import spectrogram
 
-# путь к вашему файлу
+# путь к файлу
 path = "voice_examples/Девушка1 WAV .wav"
 
-# загрузка аудио
+# загружаем весь WAV
 sample_rate, data = wavfile.read(path)
-
-# если стерео – берём один канал
 if len(data.shape) > 1:
     data = data[:, 0]
 
-# спектрограмма
+# ---- ВЫБОР ВРЕМЕННОГО ПЕРИОДА ----
+t_start = 1.2   # сек
+t_end = 1.6     # сек
+
+start_idx = int(t_start * sample_rate)
+end_idx = int(t_end * sample_rate)
+
+data_segment = data[start_idx:end_idx]
+# ---------------------------------
+
+# параметры спектрограммы
+nperseg = 4096
+noverlap = int(nperseg * 0.9)
+freq_limit = 20000
+
+# спектрограмма только выбранного фрагмента
 f, t, Sxx = spectrogram(
-    data,
+    data_segment,
     fs=sample_rate,
     window='hann',
-    nperseg=2048,
-    noverlap=1024,
+    nperseg=nperseg,
+    noverlap=noverlap,
+    scaling='density',
     mode='magnitude'
 )
 
-# ограничение частоты до 10 kHz
-freq_limit = 2000
+# ограничение частоты
 mask = f <= freq_limit
-
 f = f[mask]
 Sxx = Sxx[mask, :]
 
-# ограничение амплитуды до 150
-Sxx = np.clip(Sxx, 0, 150)
+# перевод в dB
+Sxx_dB = 20 * np.log10(Sxx + 1e-10)
+Sxx_dB = np.clip(Sxx_dB, -30, 0)
 
 # график
-plt.figure(figsize=(12, 6))
-plt.pcolormesh(t, f, Sxx, shading='gouraud')
+plt.figure(figsize=(14, 7))
+plt.pcolormesh(t + t_start, f, Sxx_dB, shading='gouraud', cmap='inferno')
+#           ^ добавили смещение по времени
+
 plt.ylabel("Частота (Гц)")
 plt.xlabel("Время (с)")
-plt.title("Спектрограмма (0–2 kHz, амплитуда до 150)")
-plt.colorbar(label="Амплитуда")
+plt.title("Спектрограмма выбранного временного участка (dB)")
+plt.colorbar(label="Амплитуда (dB)")
 plt.ylim(0, freq_limit)
+plt.tight_layout()
 plt.show()
