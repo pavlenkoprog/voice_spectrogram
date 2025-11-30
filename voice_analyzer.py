@@ -15,6 +15,12 @@ from scipy.io import wavfile
 from scipy.signal import spectrogram
 from typing import Optional, Tuple
 
+try:
+    import ttkthemes
+    HAS_TTKTHEMES = True
+except ImportError:
+    HAS_TTKTHEMES = False
+
 
 class VoiceAnalyzer:
     """Класс для анализа голосовых файлов с графическим интерфейсом."""
@@ -34,8 +40,63 @@ class VoiceAnalyzer:
         self.data: Optional[np.ndarray] = None
         self.file_path: Optional[str] = None
 
+        self._setup_dark_theme()
         self._create_widgets()
         self._setup_defaults()
+
+    def _setup_dark_theme(self) -> None:
+        """
+        Настраивает темную тему для интерфейса и графиков.
+        """
+        # Темная тема для tkinter
+        self.root.configure(bg="#2b2b2b")
+        
+        style = ttk.Style()
+        
+        # Попытка использовать ttkthemes, если доступен
+        if HAS_TTKTHEMES:
+            try:
+                style.theme_use("equilux")
+            except:
+                style.theme_use("clam")
+        else:
+            style.theme_use("clam")
+        
+        # Базовые цвета темной темы
+        bg_color = "#2b2b2b"
+        fg_color = "#ffffff"
+        entry_bg = "#404040"
+        button_bg = "#404040"
+        button_active = "#505050"
+        border_color = "#555555"
+        
+        # Настройка цветов для темной темы
+        style.configure("TFrame", background=bg_color)
+        style.configure("TLabelFrame", background=bg_color, foreground=fg_color, 
+                       bordercolor=border_color, relief="solid", borderwidth=1)
+        style.configure("TLabelFrame.Label", background=bg_color, foreground=fg_color)
+        style.configure("TLabel", background=bg_color, foreground=fg_color)
+        style.configure("TButton", background=button_bg, foreground=fg_color, 
+                       bordercolor=border_color)
+        style.map("TButton", 
+                  background=[("active", button_active), ("pressed", "#606060")],
+                  bordercolor=[("active", "#666666")])
+        style.configure("TEntry", fieldbackground=entry_bg, foreground=fg_color, 
+                       bordercolor=border_color, insertcolor=fg_color,
+                       selectbackground="#606060", selectforeground=fg_color)
+        style.map("TEntry", 
+                  fieldbackground=[("focus", entry_bg)],
+                  bordercolor=[("focus", "#777777")])
+        style.configure("TCombobox", fieldbackground=entry_bg, foreground=fg_color,
+                       bordercolor=border_color, arrowcolor=fg_color,
+                       selectbackground="#606060", selectforeground=fg_color)
+        style.map("TCombobox", 
+                  fieldbackground=[("readonly", entry_bg)],
+                  selectbackground=[("readonly", "#606060")],
+                  bordercolor=[("focus", "#777777")])
+        
+        # Темная тема для matplotlib
+        plt.style.use("dark_background")
 
     def _create_widgets(self) -> None:
         """Создает виджеты интерфейса."""
@@ -69,8 +130,16 @@ class VoiceAnalyzer:
         spectro_frame.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
 
         # График спектрограммы
-        self.fig_spectro = Figure(figsize=(12, 6), dpi=100)
-        self.ax_spectro = self.fig_spectro.add_subplot(111)
+        self.fig_spectro = Figure(figsize=(12, 6), dpi=100, facecolor="#1e1e1e")
+        self.ax_spectro = self.fig_spectro.add_subplot(111, facecolor="#1e1e1e")
+        self.ax_spectro.tick_params(colors="#ffffff")
+        self.ax_spectro.xaxis.label.set_color("#ffffff")
+        self.ax_spectro.yaxis.label.set_color("#ffffff")
+        self.ax_spectro.title.set_color("#ffffff")
+        self.ax_spectro.spines["bottom"].set_color("#ffffff")
+        self.ax_spectro.spines["top"].set_color("#ffffff")
+        self.ax_spectro.spines["right"].set_color("#ffffff")
+        self.ax_spectro.spines["left"].set_color("#ffffff")
 
         self.canvas_spectro = FigureCanvasTkAgg(self.fig_spectro, spectro_frame)
         self.canvas_spectro.get_tk_widget().pack(fill=tk.BOTH, expand=True)
@@ -80,45 +149,68 @@ class VoiceAnalyzer:
         volume_frame.grid(row=1, column=0, sticky="nsew", padx=2, pady=2)
 
         # График громкости
-        self.fig_volume = Figure(figsize=(12, 2), dpi=100)
-        self.ax_volume = self.fig_volume.add_subplot(111)
+        self.fig_volume = Figure(figsize=(12, 2), dpi=100, facecolor="#1e1e1e")
+        self.ax_volume = self.fig_volume.add_subplot(111, facecolor="#1e1e1e")
+        self.ax_volume.tick_params(colors="#ffffff")
+        self.ax_volume.xaxis.label.set_color("#ffffff")
+        self.ax_volume.yaxis.label.set_color("#ffffff")
+        self.ax_volume.title.set_color("#ffffff")
+        self.ax_volume.spines["bottom"].set_color("#ffffff")
+        self.ax_volume.spines["top"].set_color("#ffffff")
+        self.ax_volume.spines["right"].set_color("#ffffff")
+        self.ax_volume.spines["left"].set_color("#ffffff")
 
         self.canvas_volume = FigureCanvasTkAgg(self.fig_volume, volume_frame)
         self.canvas_volume.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
         # Панель настроек (приоритетная, всегда видна, не сжимается)
-        settings_frame = ttk.LabelFrame(self.root, text="Настройки", padding="10")
-        settings_frame.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
+        # Используем обычный Frame вместо LabelFrame для лучшего контроля цвета
+        settings_container = tk.Frame(self.root, bg="#2b2b2b", relief="solid", bd=1)
+        settings_container.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
+        
+        # Заголовок панели
+        settings_label = tk.Label(
+            settings_container, 
+            text="Настройки", 
+            bg="#2b2b2b", 
+            fg="#ffffff",
+            font=("TkDefaultFont", 9, "bold")
+        )
+        settings_label.pack(anchor="w", padx=10, pady=(10, 5))
+        
+        # Фрейм для содержимого
+        settings_frame = tk.Frame(settings_container, bg="#2b2b2b")
+        settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
         # Первая строка настроек
-        row1 = ttk.Frame(settings_frame)
+        row1 = tk.Frame(settings_frame, bg="#2b2b2b")
         row1.pack(fill=tk.X, pady=2)
 
-        ttk.Label(row1, text="t_start (с):").pack(side=tk.LEFT, padx=5)
+        tk.Label(row1, text="t_start (с):", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.t_start_var = tk.StringVar(value="0")
         ttk.Entry(row1, textvariable=self.t_start_var, width=10).pack(
             side=tk.LEFT, padx=5
         )
 
-        ttk.Label(row1, text="t_end (с):").pack(side=tk.LEFT, padx=5)
+        tk.Label(row1, text="t_end (с):", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.t_end_var = tk.StringVar(value="1.0")
         ttk.Entry(row1, textvariable=self.t_end_var, width=10).pack(
             side=tk.LEFT, padx=5
         )
 
-        ttk.Label(row1, text="nperseg:").pack(side=tk.LEFT, padx=5)
+        tk.Label(row1, text="nperseg:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.nperseg_var = tk.StringVar(value="1024")
         ttk.Entry(row1, textvariable=self.nperseg_var, width=10).pack(
             side=tk.LEFT, padx=5
         )
 
-        ttk.Label(row1, text="freq_limit (Гц):").pack(side=tk.LEFT, padx=5)
+        tk.Label(row1, text="freq_limit (Гц):", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.freq_limit_var = tk.StringVar(value="20000")
         ttk.Entry(row1, textvariable=self.freq_limit_var, width=10).pack(
             side=tk.LEFT, padx=5
         )
 
-        ttk.Label(row1, text="window:").pack(side=tk.LEFT, padx=5)
+        tk.Label(row1, text="window:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.window_var = tk.StringVar(value="hann")
         window_combo = ttk.Combobox(
             row1,
@@ -129,7 +221,7 @@ class VoiceAnalyzer:
         )
         window_combo.pack(side=tk.LEFT, padx=5)
 
-        ttk.Label(row1, text="scaling:").pack(side=tk.LEFT, padx=5)
+        tk.Label(row1, text="scaling:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.scaling_var = tk.StringVar(value="density")
         scaling_combo = ttk.Combobox(
             row1,
@@ -140,7 +232,7 @@ class VoiceAnalyzer:
         )
         scaling_combo.pack(side=tk.LEFT, padx=5)
 
-        ttk.Label(row1, text="mode:").pack(side=tk.LEFT, padx=5)
+        tk.Label(row1, text="mode:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.mode_var = tk.StringVar(value="magnitude")
         mode_combo = ttk.Combobox(
             row1,
@@ -152,10 +244,10 @@ class VoiceAnalyzer:
         mode_combo.pack(side=tk.LEFT, padx=5)
 
         # Вторая строка настроек
-        row2 = ttk.Frame(settings_frame)
+        row2 = tk.Frame(settings_frame, bg="#2b2b2b")
         row2.pack(fill=tk.X, pady=2)
 
-        ttk.Label(row2, text="cmap:").pack(side=tk.LEFT, padx=5)
+        tk.Label(row2, text="cmap:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.cmap_var = tk.StringVar(value="inferno")
         cmap_combo = ttk.Combobox(
             row2,
@@ -175,7 +267,7 @@ class VoiceAnalyzer:
         )
         cmap_combo.pack(side=tk.LEFT, padx=5)
 
-        ttk.Label(row2, text="shading:").pack(side=tk.LEFT, padx=5)
+        tk.Label(row2, text="shading:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.shading_var = tk.StringVar(value="gouraud")
         shading_combo = ttk.Combobox(
             row2,
@@ -186,25 +278,25 @@ class VoiceAnalyzer:
         )
         shading_combo.pack(side=tk.LEFT, padx=5)
 
-        ttk.Label(row2, text="noverlap (%):").pack(side=tk.LEFT, padx=5)
+        tk.Label(row2, text="noverlap (%):", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.noverlap_percent_var = tk.StringVar(value="90")
         ttk.Entry(row2, textvariable=self.noverlap_percent_var, width=10).pack(
             side=tk.LEFT, padx=5
         )
 
-        ttk.Label(row2, text="dB min:").pack(side=tk.LEFT, padx=5)
+        tk.Label(row2, text="dB min:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.db_min_var = tk.StringVar(value="-50")
         ttk.Entry(row2, textvariable=self.db_min_var, width=10).pack(
             side=tk.LEFT, padx=5
         )
 
-        ttk.Label(row2, text="dB max:").pack(side=tk.LEFT, padx=5)
+        tk.Label(row2, text="dB max:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.db_max_var = tk.StringVar(value="0")
         ttk.Entry(row2, textvariable=self.db_max_var, width=10).pack(
             side=tk.LEFT, padx=5
         )
 
-        ttk.Label(row2, text="smoothing (мс):").pack(side=tk.LEFT, padx=5)
+        tk.Label(row2, text="smoothing (мс):", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
         self.smooth_window_var = tk.StringVar(value="5")
         ttk.Entry(row2, textvariable=self.smooth_window_var, width=10).pack(
             side=tk.LEFT, padx=5
@@ -333,6 +425,7 @@ class VoiceAnalyzer:
 
             # Очистка и отрисовка спектрограммы
             self.ax_spectro.clear()
+            self.ax_spectro.set_facecolor("#1e1e1e")
             im = self.ax_spectro.pcolormesh(
                 t + t_start,
                 f,
@@ -344,10 +437,23 @@ class VoiceAnalyzer:
             self.ax_spectro.set_xlabel("Время (с)")
             self.ax_spectro.set_title("Спектрограмма")
             self.ax_spectro.set_ylim(0, freq_limit)
-            self.fig_spectro.colorbar(im, ax=self.ax_spectro, label="Амплитуда (dB)")
+            self.ax_spectro.tick_params(colors="#ffffff")
+            self.ax_spectro.xaxis.label.set_color("#ffffff")
+            self.ax_spectro.yaxis.label.set_color("#ffffff")
+            self.ax_spectro.title.set_color("#ffffff")
+            self.ax_spectro.spines["bottom"].set_color("#ffffff")
+            self.ax_spectro.spines["top"].set_color("#ffffff")
+            self.ax_spectro.spines["right"].set_color("#ffffff")
+            self.ax_spectro.spines["left"].set_color("#ffffff")
+            
+            cbar = self.fig_spectro.colorbar(im, ax=self.ax_spectro, label="Амплитуда (dB)")
+            cbar.set_label("Амплитуда (dB)", color="#ffffff")
+            cbar.ax.yaxis.set_tick_params(colors="#ffffff")
+            cbar.outline.set_edgecolor("#ffffff")
 
             # График громкости
             self.ax_volume.clear()
+            self.ax_volume.set_facecolor("#1e1e1e")
 
             # Нормализация данных
             segment_normalized = data_segment / np.max(np.abs(data_segment)) if np.max(np.abs(data_segment)) > 0 else data_segment
@@ -367,11 +473,19 @@ class VoiceAnalyzer:
             # Шкала времени
             time = np.linspace(t_start, t_end, len(envelope))
 
-            self.ax_volume.plot(time, envelope, linewidth=1)
+            self.ax_volume.plot(time, envelope, linewidth=1, color="#00ff00")
             self.ax_volume.set_xlabel("Время (с)")
             self.ax_volume.set_ylabel("Амплитуда")
             self.ax_volume.set_title("График громкости")
-            self.ax_volume.grid(True, alpha=0.3)
+            self.ax_volume.grid(True, alpha=0.3, color="#555555")
+            self.ax_volume.tick_params(colors="#ffffff")
+            self.ax_volume.xaxis.label.set_color("#ffffff")
+            self.ax_volume.yaxis.label.set_color("#ffffff")
+            self.ax_volume.title.set_color("#ffffff")
+            self.ax_volume.spines["bottom"].set_color("#ffffff")
+            self.ax_volume.spines["top"].set_color("#ffffff")
+            self.ax_volume.spines["right"].set_color("#ffffff")
+            self.ax_volume.spines["left"].set_color("#ffffff")
 
             # Обновление обоих canvas
             self.fig_spectro.tight_layout()
