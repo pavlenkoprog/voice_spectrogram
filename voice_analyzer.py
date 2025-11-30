@@ -39,9 +39,14 @@ class VoiceAnalyzer:
 
     def _create_widgets(self) -> None:
         """Создает виджеты интерфейса."""
+        # Настройка grid для всего окна
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(1, weight=1)  # Графики могут сжиматься
+        # Панель настроек (row=2) без weight - всегда видна
+
         # Верхняя панель с кнопкой загрузки
         top_frame = ttk.Frame(self.root, padding="5")
-        top_frame.pack(fill=tk.X)
+        top_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
 
         ttk.Button(
             top_frame, text="Загрузить WAV файл", command=self._load_file
@@ -50,21 +55,40 @@ class VoiceAnalyzer:
         self.file_label = ttk.Label(top_frame, text="Файл не загружен")
         self.file_label.pack(side=tk.LEFT, padx=10)
 
-        # Фрейм для графиков
-        graphs_frame = ttk.Frame(self.root)
-        graphs_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # Контейнер для графиков с процентным распределением
+        graphs_container = ttk.Frame(self.root)
+        graphs_container.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
+
+        # Настройка grid для процентного распределения графиков
+        graphs_container.columnconfigure(0, weight=1)
+        graphs_container.rowconfigure(0, weight=60)  # Спектрограмма 60%
+        graphs_container.rowconfigure(1, weight=20)  # Громкость 20%
+
+        # Фрейм для спектрограммы (60%)
+        spectro_frame = ttk.Frame(graphs_container)
+        spectro_frame.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
 
         # График спектрограммы
-        self.fig = Figure(figsize=(12, 8), dpi=100)
-        self.ax_spectro = self.fig.add_subplot(2, 1, 1)
-        self.ax_volume = self.fig.add_subplot(2, 1, 2)
+        self.fig_spectro = Figure(figsize=(12, 6), dpi=100)
+        self.ax_spectro = self.fig_spectro.add_subplot(111)
 
-        self.canvas = FigureCanvasTkAgg(self.fig, graphs_frame)
-        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        self.canvas_spectro = FigureCanvasTkAgg(self.fig_spectro, spectro_frame)
+        self.canvas_spectro.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-        # Панель настроек
+        # Фрейм для графика громкости (20%)
+        volume_frame = ttk.Frame(graphs_container)
+        volume_frame.grid(row=1, column=0, sticky="nsew", padx=2, pady=2)
+
+        # График громкости
+        self.fig_volume = Figure(figsize=(12, 2), dpi=100)
+        self.ax_volume = self.fig_volume.add_subplot(111)
+
+        self.canvas_volume = FigureCanvasTkAgg(self.fig_volume, volume_frame)
+        self.canvas_volume.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+        # Панель настроек (приоритетная, всегда видна, не сжимается)
         settings_frame = ttk.LabelFrame(self.root, text="Настройки", padding="10")
-        settings_frame.pack(fill=tk.X, padx=5, pady=5)
+        settings_frame.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
 
         # Первая строка настроек
         row1 = ttk.Frame(settings_frame)
@@ -94,14 +118,10 @@ class VoiceAnalyzer:
             side=tk.LEFT, padx=5
         )
 
-        # Вторая строка настроек
-        row2 = ttk.Frame(settings_frame)
-        row2.pack(fill=tk.X, pady=2)
-
-        ttk.Label(row2, text="window:").pack(side=tk.LEFT, padx=5)
+        ttk.Label(row1, text="window:").pack(side=tk.LEFT, padx=5)
         self.window_var = tk.StringVar(value="hann")
         window_combo = ttk.Combobox(
-            row2,
+            row1,
             textvariable=self.window_var,
             values=["hann", "hamming", "blackman", "bartlett", "boxcar"],
             width=10,
@@ -109,10 +129,10 @@ class VoiceAnalyzer:
         )
         window_combo.pack(side=tk.LEFT, padx=5)
 
-        ttk.Label(row2, text="scaling:").pack(side=tk.LEFT, padx=5)
+        ttk.Label(row1, text="scaling:").pack(side=tk.LEFT, padx=5)
         self.scaling_var = tk.StringVar(value="density")
         scaling_combo = ttk.Combobox(
-            row2,
+            row1,
             textvariable=self.scaling_var,
             values=["density", "spectrum"],
             width=10,
@@ -120,16 +140,20 @@ class VoiceAnalyzer:
         )
         scaling_combo.pack(side=tk.LEFT, padx=5)
 
-        ttk.Label(row2, text="mode:").pack(side=tk.LEFT, padx=5)
+        ttk.Label(row1, text="mode:").pack(side=tk.LEFT, padx=5)
         self.mode_var = tk.StringVar(value="magnitude")
         mode_combo = ttk.Combobox(
-            row2,
+            row1,
             textvariable=self.mode_var,
             values=["magnitude", "psd", "phase", "angle", "complex"],
             width=10,
             state="readonly",
         )
         mode_combo.pack(side=tk.LEFT, padx=5)
+
+        # Вторая строка настроек
+        row2 = ttk.Frame(settings_frame)
+        row2.pack(fill=tk.X, pady=2)
 
         ttk.Label(row2, text="cmap:").pack(side=tk.LEFT, padx=5)
         self.cmap_var = tk.StringVar(value="inferno")
@@ -162,37 +186,33 @@ class VoiceAnalyzer:
         )
         shading_combo.pack(side=tk.LEFT, padx=5)
 
-        # Третья строка настроек
-        row3 = ttk.Frame(settings_frame)
-        row3.pack(fill=tk.X, pady=2)
-
-        ttk.Label(row3, text="noverlap (%):").pack(side=tk.LEFT, padx=5)
+        ttk.Label(row2, text="noverlap (%):").pack(side=tk.LEFT, padx=5)
         self.noverlap_percent_var = tk.StringVar(value="90")
-        ttk.Entry(row3, textvariable=self.noverlap_percent_var, width=10).pack(
+        ttk.Entry(row2, textvariable=self.noverlap_percent_var, width=10).pack(
             side=tk.LEFT, padx=5
         )
 
-        ttk.Label(row3, text="dB min:").pack(side=tk.LEFT, padx=5)
+        ttk.Label(row2, text="dB min:").pack(side=tk.LEFT, padx=5)
         self.db_min_var = tk.StringVar(value="-50")
-        ttk.Entry(row3, textvariable=self.db_min_var, width=10).pack(
+        ttk.Entry(row2, textvariable=self.db_min_var, width=10).pack(
             side=tk.LEFT, padx=5
         )
 
-        ttk.Label(row3, text="dB max:").pack(side=tk.LEFT, padx=5)
+        ttk.Label(row2, text="dB max:").pack(side=tk.LEFT, padx=5)
         self.db_max_var = tk.StringVar(value="0")
-        ttk.Entry(row3, textvariable=self.db_max_var, width=10).pack(
+        ttk.Entry(row2, textvariable=self.db_max_var, width=10).pack(
             side=tk.LEFT, padx=5
         )
 
-        ttk.Label(row3, text="smoothing window (мс):").pack(side=tk.LEFT, padx=5)
+        ttk.Label(row2, text="smoothing (мс):").pack(side=tk.LEFT, padx=5)
         self.smooth_window_var = tk.StringVar(value="5")
-        ttk.Entry(row3, textvariable=self.smooth_window_var, width=10).pack(
+        ttk.Entry(row2, textvariable=self.smooth_window_var, width=10).pack(
             side=tk.LEFT, padx=5
         )
 
         # Кнопка обновления
         ttk.Button(
-            row3, text="Обновить графики", command=self._update_plots
+            row2, text="Обновить графики", command=self._update_plots
         ).pack(side=tk.LEFT, padx=20)
 
     def _setup_defaults(self) -> None:
@@ -219,9 +239,9 @@ class VoiceAnalyzer:
             self.file_path = file_path
             self.file_label.config(text=f"Файл: {file_path.split('/')[-1]}")
 
-            # Обновляем t_end по умолчанию на длину файла
-            duration = len(self.data) / self.sample_rate
-            self.t_end_var.set(str(duration))
+            # Устанавливаем по умолчанию первую секунду
+            self.t_start_var.set("0")
+            self.t_end_var.set("1.0")
 
             self._update_plots()
         except Exception as e:
@@ -313,7 +333,7 @@ class VoiceAnalyzer:
 
             # Очистка и отрисовка спектрограммы
             self.ax_spectro.clear()
-            self.ax_spectro.pcolormesh(
+            im = self.ax_spectro.pcolormesh(
                 t + t_start,
                 f,
                 Sxx_dB,
@@ -324,6 +344,7 @@ class VoiceAnalyzer:
             self.ax_spectro.set_xlabel("Время (с)")
             self.ax_spectro.set_title("Спектрограмма")
             self.ax_spectro.set_ylim(0, freq_limit)
+            self.fig_spectro.colorbar(im, ax=self.ax_spectro, label="Амплитуда (dB)")
 
             # График громкости
             self.ax_volume.clear()
@@ -352,8 +373,11 @@ class VoiceAnalyzer:
             self.ax_volume.set_title("График громкости")
             self.ax_volume.grid(True, alpha=0.3)
 
-            self.fig.tight_layout()
-            self.canvas.draw()
+            # Обновление обоих canvas
+            self.fig_spectro.tight_layout()
+            self.fig_volume.tight_layout()
+            self.canvas_spectro.draw()
+            self.canvas_volume.draw()
 
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при построении графиков: {str(e)}")
