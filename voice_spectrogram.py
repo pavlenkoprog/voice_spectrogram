@@ -4,7 +4,7 @@ from scipy.io import wavfile
 from scipy.signal import spectrogram
 
 # путь к файлу
-path = "voice_examples/Девушка1 WAV .wav"
+path = "voice_examples/Запись_речи_с_петличного_микрофона_WAV_.wav"
 
 # загружаем весь WAV
 sample_rate, data = wavfile.read(path)
@@ -12,8 +12,8 @@ if len(data.shape) > 1:
     data = data[:, 0]
 
 # ---- ВЫБОР ВРЕМЕННОГО ПЕРИОДА ----
-t_start = 1.2   # сек
-t_end = 1.6     # сек
+t_start = 0  # сек
+t_end = 0.5    # сек
 
 start_idx = int(t_start * sample_rate)
 end_idx = int(t_end * sample_rate)
@@ -22,7 +22,7 @@ data_segment = data[start_idx:end_idx]
 # ---------------------------------
 
 # параметры спектрограммы
-nperseg = 4096
+nperseg = 1024
 noverlap = int(nperseg * 0.9)
 freq_limit = 20000
 
@@ -44,7 +44,7 @@ Sxx = Sxx[mask, :]
 
 # перевод в dB
 Sxx_dB = 20 * np.log10(Sxx + 1e-10)
-Sxx_dB = np.clip(Sxx_dB, -30, 0)
+Sxx_dB = np.clip(Sxx_dB, -50, 0)
 
 # график
 plt.figure(figsize=(14, 7))
