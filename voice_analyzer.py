@@ -446,10 +446,18 @@ class VoiceAnalyzer:
             self.cbar_spectro.set_label("Амплитуда (dB)", color="#ffffff")
             self.cbar_spectro.ax.yaxis.set_tick_params(colors="#ffffff")
             self.cbar_spectro.outline.set_edgecolor("#ffffff")
+            
+            # Получаем позицию axes спектрограммы после добавления colorbar
+            spectro_pos = self.ax_spectro.get_position()
 
             # График громкости
             self.ax_volume.clear()
             self.ax_volume.set_facecolor("#1e1e1e")
+            
+            # Устанавливаем ту же ширину области графика, что и у спектрограммы
+            volume_pos = self.ax_volume.get_position()
+            self.ax_volume.set_position([spectro_pos.x0, volume_pos.y0, 
+                                         spectro_pos.width, volume_pos.height])
 
             # Нормализация данных
             segment_normalized = data_segment / np.max(np.abs(data_segment)) if np.max(np.abs(data_segment)) > 0 else data_segment
@@ -484,8 +492,16 @@ class VoiceAnalyzer:
             self.ax_volume.spines["left"].set_color("#ffffff")
 
             # Обновление обоих canvas
+            # Используем tight_layout для правильного размещения элементов
             self.fig_spectro.tight_layout()
             self.fig_volume.tight_layout()
+            
+            # После tight_layout снова выравниваем позиции
+            spectro_pos = self.ax_spectro.get_position()
+            volume_pos = self.ax_volume.get_position()
+            self.ax_volume.set_position([spectro_pos.x0, volume_pos.y0, 
+                                         spectro_pos.width, volume_pos.height])
+            
             self.canvas_spectro.draw()
             self.canvas_volume.draw()
 
