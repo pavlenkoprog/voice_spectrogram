@@ -288,10 +288,17 @@ class VoiceAnalyzer:
         self.db_max_var = tk.StringVar(value="0")
         ttk.Entry(row, textvariable=self.db_max_var, width=12).pack(side=tk.LEFT, padx=5)
 
-        # Кнопка обновления справа от колонок
+        # Кнопки справа от колонок
+        buttons_frame = tk.Frame(columns_container, bg="#2b2b2b")
+        buttons_frame.pack(side=tk.LEFT, padx=10)
+        
         ttk.Button(
-            columns_container, text="Обновить графики", command=self._update_plots
-        ).pack(side=tk.LEFT, padx=10)
+            buttons_frame, text="Обновить графики", command=self._update_plots
+        ).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(
+            buttons_frame, text="Сбросить настройки", command=self._reset_settings
+        ).pack(side=tk.LEFT, padx=5)
 
         # Скрытые переменные для параметров, убранных из интерфейса
         self.shading_var = tk.StringVar(value="gouraud")
@@ -301,6 +308,24 @@ class VoiceAnalyzer:
     def _setup_defaults(self) -> None:
         """Устанавливает значения по умолчанию."""
         pass
+
+    def _reset_settings(self) -> None:
+        """
+        Сбрасывает все настройки на значения по умолчанию.
+        """
+        self.t_start_var.set("0")
+        self.t_end_var.set("1.0")
+        self.nperseg_var.set("1024")
+        self.window_var.set("hann")
+        self.freq_limit_var.set("20000")
+        self.noverlap_percent_var.set("90")
+        self.mode_var.set("magnitude")
+        self.scaling_var.set("density")
+        self.db_min_var.set("-50")
+        self.db_max_var.set("0")
+        self.shading_var.set("gouraud")
+        self.cmap_var.set("inferno")
+        self.smooth_window_var.set("5")
 
     def _load_file(self) -> None:
         """
