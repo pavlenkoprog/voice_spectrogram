@@ -50,6 +50,9 @@ desktop.ini
 .coverage
 htmlcov/
 
+# PyInstaller
+*.spec
+
 # mypy
 .mypy_cache/
 .dmypy.json

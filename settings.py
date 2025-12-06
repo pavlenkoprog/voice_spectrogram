@@ -6,6 +6,7 @@
 
 import json
 import os
+import sys
 from typing import Dict
 from tkinter import messagebox
 
@@ -36,7 +37,16 @@ class SettingsManager:
         Параметры:
             config_file (str): Путь к файлу конфигурации.
         """
-        self.config_file = config_file
+        # Определяем путь к директории приложения
+        if getattr(sys, "frozen", False):
+            # Если приложение собрано в exe (PyInstaller)
+            application_path = os.path.dirname(sys.executable)
+        else:
+            # Если запущено как скрипт
+            application_path = os.path.dirname(os.path.abspath(__file__))
+
+        # Формируем полный путь к файлу конфигурации
+        self.config_file = os.path.join(application_path, config_file)
 
     def get_default_settings(self) -> Dict[str, str]:
         """
