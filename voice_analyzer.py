@@ -14,6 +14,8 @@ from matplotlib.figure import Figure
 from scipy.io import wavfile
 from scipy.signal import spectrogram
 from typing import Optional, Tuple
+import json
+import os
 
 try:
     import ttkthemes
@@ -40,10 +42,11 @@ class VoiceAnalyzer:
         self.data: Optional[np.ndarray] = None
         self.file_path: Optional[str] = None
         self.cbar_spectro: Optional[object] = None
+        self.config_file = "voice_analyzer_config.json"
 
         self._setup_dark_theme()
         self._create_widgets()
-        self._setup_defaults()
+        self._load_settings()
 
     def _setup_dark_theme(self) -> None:
         """
@@ -305,27 +308,112 @@ class VoiceAnalyzer:
         self.cmap_var = tk.StringVar(value="inferno")
         self.smooth_window_var = tk.StringVar(value="5")
 
-    def _setup_defaults(self) -> None:
-        """Устанавливает значения по умолчанию."""
-        pass
+    def _get_default_settings(self) -> dict:
+        """
+        Возвращает настройки по умолчанию.
+
+        Возвращает:
+            dict: Словарь с настройками по умолчанию.
+        """
+        return {
+            "t_start": "0",
+            "t_end": "1.0",
+            "nperseg": "1024",
+            "window": "hann",
+            "freq_limit": "20000",
+            "noverlap_percent": "90",
+            "mode": "magnitude",
+            "scaling": "density",
+            "db_min": "-50",
+            "db_max": "0",
+            "shading": "gouraud",
+            "cmap": "inferno",
+            "smooth_window": "5",
+        }
+
+    def _load_settings(self) -> None:
+        """
+        Загружает настройки из файла конфигурации.
+        """
+        default_settings = self._get_default_settings()
+        
+        if os.path.exists(self.config_file):
+            try:
+                with open(self.config_file, "r", encoding="utf-8") as f:
+                    settings = json.load(f)
+                
+                # Загружаем настройки, используя значения по умолчанию для отсутствующих ключей
+                self.t_start_var.set(settings.get("t_start", default_settings["t_start"]))
+                self.t_end_var.set(settings.get("t_end", default_settings["t_end"]))
+                self.nperseg_var.set(settings.get("nperseg", default_settings["nperseg"]))
+                self.window_var.set(settings.get("window", default_settings["window"]))
+                self.freq_limit_var.set(settings.get("freq_limit", default_settings["freq_limit"]))
+                self.noverlap_percent_var.set(settings.get("noverlap_percent", default_settings["noverlap_percent"]))
+                self.mode_var.set(settings.get("mode", default_settings["mode"]))
+                self.scaling_var.set(settings.get("scaling", default_settings["scaling"]))
+                self.db_min_var.set(settings.get("db_min", default_settings["db_min"]))
+                self.db_max_var.set(settings.get("db_max", default_settings["db_max"]))
+                self.shading_var.set(settings.get("shading", default_settings["shading"]))
+                self.cmap_var.set(settings.get("cmap", default_settings["cmap"]))
+                self.smooth_window_var.set(settings.get("smooth_window", default_settings["smooth_window"]))
+            except Exception as e:
+                messagebox.showwarning("Предупреждение", f"Не удалось загрузить настройки: {str(e)}\nИспользуются значения по умолчанию.")
+                self._apply_default_settings()
+        else:
+            self._apply_default_settings()
+
+    def _apply_default_settings(self) -> None:
+        """
+        Применяет настройки по умолчанию.
+        """
+        default_settings = self._get_default_settings()
+        self.t_start_var.set(default_settings["t_start"])
+        self.t_end_var.set(default_settings["t_end"])
+        self.nperseg_var.set(default_settings["nperseg"])
+        self.window_var.set(default_settings["window"])
+        self.freq_limit_var.set(default_settings["freq_limit"])
+        self.noverlap_percent_var.set(default_settings["noverlap_percent"])
+        self.mode_var.set(default_settings["mode"])
+        self.scaling_var.set(default_settings["scaling"])
+        self.db_min_var.set(default_settings["db_min"])
+        self.db_max_var.set(default_settings["db_max"])
+        self.shading_var.set(default_settings["shading"])
+        self.cmap_var.set(default_settings["cmap"])
+        self.smooth_window_var.set(default_settings["smooth_window"])
+
+    def _save_settings(self) -> None:
+        """
+        Сохраняет текущие настройки в файл конфигурации.
+        """
+        settings = {
+            "t_start": self.t_start_var.get(),
+            "t_end": self.t_end_var.get(),
+            "nperseg": self.nperseg_var.get(),
+            "window": self.window_var.get(),
+            "freq_limit": self.freq_limit_var.get(),
+            "noverlap_percent": self.noverlap_percent_var.get(),
+            "mode": self.mode_var.get(),
+            "scaling": self.scaling_var.get(),
+            "db_min": self.db_min_var.get(),
+            "db_max": self.db_max_var.get(),
+            "shading": self.shading_var.get(),
+            "cmap": self.cmap_var.get(),
+            "smooth_window": self.smooth_window_var.get(),
+        }
+        
+        try:
+            with open(self.config_file, "w", encoding="utf-8") as f:
+                json.dump(settings, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось сохранить настройки: {str(e)}")
 
     def _reset_settings(self) -> None:
         """
         Сбрасывает все настройки на значения по умолчанию.
         """
-        self.t_start_var.set("0")
-        self.t_end_var.set("1.0")
-        self.nperseg_var.set("1024")
-        self.window_var.set("hann")
-        self.freq_limit_var.set("20000")
-        self.noverlap_percent_var.set("90")
-        self.mode_var.set("magnitude")
-        self.scaling_var.set("density")
-        self.db_min_var.set("-50")
-        self.db_max_var.set("0")
-        self.shading_var.set("gouraud")
-        self.cmap_var.set("inferno")
-        self.smooth_window_var.set("5")
+        self._apply_default_settings()
+        self._save_settings()
+        self._save_settings()
 
     def _load_file(self) -> None:
         """
@@ -529,6 +617,9 @@ class VoiceAnalyzer:
             
             self.canvas_spectro.draw()
             self.canvas_volume.draw()
+            
+            # Сохраняем настройки после обновления графиков
+            self._save_settings()
 
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при построении графиков: {str(e)}")

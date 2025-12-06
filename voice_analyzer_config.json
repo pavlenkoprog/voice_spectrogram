@@ -1,0 +1,15 @@
+{
+    "t_start": "0",
+    "t_end": "1.0",
+    "nperseg": "1024",
+    "window": "hann",
+    "freq_limit": "20000",
+    "noverlap_percent": "90",
+    "mode": "magnitude",
+    "scaling": "density",
+    "db_min": "-50",
+    "db_max": "0",
+    "shading": "gouraud",
+    "cmap": "inferno",
+    "smooth_window": "5"
+}
