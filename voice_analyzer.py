@@ -39,6 +39,7 @@ class VoiceAnalyzer:
         self.sample_rate: Optional[int] = None
         self.data: Optional[np.ndarray] = None
         self.file_path: Optional[str] = None
+        self.cbar_spectro: Optional[object] = None
 
         self._setup_dark_theme()
         self._create_widgets()
@@ -424,6 +425,11 @@ class VoiceAnalyzer:
                 Sxx_dB = Sxx
 
             # Очистка и отрисовка спектрограммы
+            # Удаление старого colorbar
+            if self.cbar_spectro is not None:
+                self.cbar_spectro.remove()
+                self.cbar_spectro = None
+            
             self.ax_spectro.clear()
             self.ax_spectro.set_facecolor("#1e1e1e")
             im = self.ax_spectro.pcolormesh(
@@ -446,10 +452,10 @@ class VoiceAnalyzer:
             self.ax_spectro.spines["right"].set_color("#ffffff")
             self.ax_spectro.spines["left"].set_color("#ffffff")
             
-            cbar = self.fig_spectro.colorbar(im, ax=self.ax_spectro, label="Амплитуда (dB)")
-            cbar.set_label("Амплитуда (dB)", color="#ffffff")
-            cbar.ax.yaxis.set_tick_params(colors="#ffffff")
-            cbar.outline.set_edgecolor("#ffffff")
+            self.cbar_spectro = self.fig_spectro.colorbar(im, ax=self.ax_spectro, label="Амплитуда (dB)")
+            self.cbar_spectro.set_label("Амплитуда (dB)", color="#ffffff")
+            self.cbar_spectro.ax.yaxis.set_tick_params(colors="#ffffff")
+            self.cbar_spectro.outline.set_edgecolor("#ffffff")
 
             # График громкости
             self.ax_volume.clear()
