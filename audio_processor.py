@@ -101,9 +101,15 @@ class AudioProcessor:
         f = f[mask]
         Sxx = Sxx[mask, :]
 
-        # Перевод в dB
+        # Перевод в dB с нормализацией относительно максимума
         if params["mode"] != "phase" and params["mode"] != "angle":
-            Sxx_dB = 20 * np.log10(Sxx + 1e-10)
+            # Нормализуем относительно максимума, чтобы максимум был 0 дБ
+            Sxx_max = np.max(Sxx)
+            if Sxx_max > 0:
+                Sxx_normalized = Sxx / Sxx_max
+                Sxx_dB = 20 * np.log10(Sxx_normalized + 1e-10)
+            else:
+                Sxx_dB = 20 * np.log10(Sxx + 1e-10)
             Sxx_dB = np.clip(Sxx_dB, params["db_min"], params["db_max"])
         else:
             Sxx_dB = Sxx
