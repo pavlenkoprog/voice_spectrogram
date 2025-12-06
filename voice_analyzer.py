@@ -41,7 +41,10 @@ class VoiceAnalyzer:
 
         # Создание интерфейса
         self.vars = self.ui_builder.create_ui(
-            self._load_file, self._update_plots, self._reset_settings
+            self._load_file,
+            self._update_plots,
+            self._reset_settings,
+            self._get_audio_duration,
         )
 
         # Создание построителя графиков
@@ -78,6 +81,20 @@ class VoiceAnalyzer:
                 self.vars[key].set(value)
 
         self._save_settings()
+
+    def _get_audio_duration(self) -> float:
+        """
+        Возвращает длительность загруженного аудио файла в секундах.
+
+        Возвращает:
+            float: Длительность в секундах или 0 если файл не загружен.
+        """
+        if (
+            self.audio_processor.data is None
+            or self.audio_processor.sample_rate is None
+        ):
+            return 0.0
+        return len(self.audio_processor.data) / self.audio_processor.sample_rate
 
     def _load_file(self) -> None:
         """Загружает WAV файл для анализа."""
