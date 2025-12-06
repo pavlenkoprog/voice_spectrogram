@@ -1,6 +1,6 @@
 {
     "t_start": "0",
-    "t_end": "3.0",
+    "t_end": "1.0",
     "nperseg": "1024",
     "window": "hann",
     "freq_limit": "20000",
