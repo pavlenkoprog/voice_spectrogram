@@ -7,6 +7,7 @@
 import tkinter as tk
 from tkinter import ttk
 from typing import Dict, Callable, Optional
+import webbrowser
 
 
 class UIBuilder:
@@ -76,6 +77,14 @@ class UIBuilder:
 
         self.file_label = ttk.Label(top_frame, text="Файл не загружен")
         self.file_label.pack(side=tk.LEFT, padx=10)
+
+        help_button = ttk.Button(
+            top_frame,
+            text="?",
+            command=lambda: webbrowser.open("https://github.com/pavlenkoprog/voice_spectrogram"),
+            width=3,
+        )
+        help_button.pack(side=tk.RIGHT, padx=5)
 
     def _create_settings_panel(
         self, update_plots_callback: Callable, reset_settings_callback: Callable
