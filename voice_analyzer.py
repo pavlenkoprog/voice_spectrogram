@@ -177,44 +177,48 @@ class VoiceAnalyzer:
             fg="#ffffff",
             font=("TkDefaultFont", 9, "bold")
         )
-        settings_label.pack(anchor="w", padx=10, pady=(10, 5))
+        settings_label.pack(anchor="w", padx=20, pady=(10, 5))
         
         # Фрейм для содержимого
         settings_frame = tk.Frame(settings_container, bg="#2b2b2b")
         settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
-        # Первая строка настроек
-        row1 = tk.Frame(settings_frame, bg="#2b2b2b")
-        row1.pack(fill=tk.X, pady=2)
+        # Контейнер для колонок и кнопки
+        columns_container = tk.Frame(settings_frame, bg="#2b2b2b")
+        columns_container.pack(fill=tk.X, pady=5)
 
-        tk.Label(row1, text="t_start (с):", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
+        # Колонка 1: Время
+        col1 = tk.Frame(columns_container, bg="#2b2b2b")
+        col1.pack(side=tk.LEFT, padx=10)
+        
+        row = tk.Frame(col1, bg="#2b2b2b")
+        row.pack(fill=tk.X, pady=2)
+        tk.Label(row, text="Начало времени (с):", bg="#2b2b2b", fg="#ffffff", width=16, anchor="w").pack(side=tk.LEFT)
         self.t_start_var = tk.StringVar(value="0")
-        ttk.Entry(row1, textvariable=self.t_start_var, width=10).pack(
-            side=tk.LEFT, padx=5
-        )
-
-        tk.Label(row1, text="t_end (с):", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
+        ttk.Entry(row, textvariable=self.t_start_var, width=12).pack(side=tk.LEFT, padx=5)
+        
+        row = tk.Frame(col1, bg="#2b2b2b")
+        row.pack(fill=tk.X, pady=2)
+        tk.Label(row, text="Конец времени (с):", bg="#2b2b2b", fg="#ffffff", width=16, anchor="w").pack(side=tk.LEFT)
         self.t_end_var = tk.StringVar(value="1.0")
-        ttk.Entry(row1, textvariable=self.t_end_var, width=10).pack(
-            side=tk.LEFT, padx=5
-        )
+        ttk.Entry(row, textvariable=self.t_end_var, width=12).pack(side=tk.LEFT, padx=5)
 
-        tk.Label(row1, text="nperseg:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
+        # Колонка 2: Окно
+        col2 = tk.Frame(columns_container, bg="#2b2b2b")
+        col2.pack(side=tk.LEFT, padx=10)
+        
+        row = tk.Frame(col2, bg="#2b2b2b")
+        row.pack(fill=tk.X, pady=2)
+        tk.Label(row, text="Размер окна:", bg="#2b2b2b", fg="#ffffff", width=12, anchor="w").pack(side=tk.LEFT)
         self.nperseg_var = tk.StringVar(value="1024")
-        ttk.Entry(row1, textvariable=self.nperseg_var, width=10).pack(
-            side=tk.LEFT, padx=5
-        )
-
-        tk.Label(row1, text="freq_limit (Гц):", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
-        self.freq_limit_var = tk.StringVar(value="20000")
-        ttk.Entry(row1, textvariable=self.freq_limit_var, width=10).pack(
-            side=tk.LEFT, padx=5
-        )
-
-        tk.Label(row1, text="window:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
+        ttk.Entry(row, textvariable=self.nperseg_var, width=12).pack(side=tk.LEFT, padx=5)
+        
+        row = tk.Frame(col2, bg="#2b2b2b")
+        row.pack(fill=tk.X, pady=2)
+        tk.Label(row, text="Функция окна:", bg="#2b2b2b", fg="#ffffff", width=12, anchor="w").pack(side=tk.LEFT)
         self.window_var = tk.StringVar(value="hann")
         window_combo = ttk.Combobox(
-            row1,
+            row,
             textvariable=self.window_var,
             values=["hann", "hamming", "blackman", "bartlett", "boxcar"],
             width=10,
@@ -222,10 +226,45 @@ class VoiceAnalyzer:
         )
         window_combo.pack(side=tk.LEFT, padx=5)
 
-        tk.Label(row1, text="scaling:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
+        # Колонка 3: Частота и перекрытие
+        col3 = tk.Frame(columns_container, bg="#2b2b2b")
+        col3.pack(side=tk.LEFT, padx=10)
+        
+        row = tk.Frame(col3, bg="#2b2b2b")
+        row.pack(fill=tk.X, pady=2)
+        tk.Label(row, text="Макс. частота (Гц):", bg="#2b2b2b", fg="#ffffff", width=15, anchor="w").pack(side=tk.LEFT)
+        self.freq_limit_var = tk.StringVar(value="20000")
+        ttk.Entry(row, textvariable=self.freq_limit_var, width=12).pack(side=tk.LEFT, padx=5)
+        
+        row = tk.Frame(col3, bg="#2b2b2b")
+        row.pack(fill=tk.X, pady=2)
+        tk.Label(row, text="Перекрытие (%):", bg="#2b2b2b", fg="#ffffff", width=15, anchor="w").pack(side=tk.LEFT)
+        self.noverlap_percent_var = tk.StringVar(value="90")
+        ttk.Entry(row, textvariable=self.noverlap_percent_var, width=12).pack(side=tk.LEFT, padx=5)
+
+        # Колонка 4: Режим и масштабирование
+        col4 = tk.Frame(columns_container, bg="#2b2b2b")
+        col4.pack(side=tk.LEFT, padx=10)
+        
+        row = tk.Frame(col4, bg="#2b2b2b")
+        row.pack(fill=tk.X, pady=2)
+        tk.Label(row, text="Режим:", bg="#2b2b2b", fg="#ffffff", width=16, anchor="w").pack(side=tk.LEFT)
+        self.mode_var = tk.StringVar(value="magnitude")
+        mode_combo = ttk.Combobox(
+            row,
+            textvariable=self.mode_var,
+            values=["magnitude", "psd", "phase", "angle", "complex"],
+            width=10,
+            state="readonly",
+        )
+        mode_combo.pack(side=tk.LEFT, padx=5)
+        
+        row = tk.Frame(col4, bg="#2b2b2b")
+        row.pack(fill=tk.X, pady=2)
+        tk.Label(row, text="Масштабирование:", bg="#2b2b2b", fg="#ffffff", width=16, anchor="w").pack(side=tk.LEFT)
         self.scaling_var = tk.StringVar(value="density")
         scaling_combo = ttk.Combobox(
-            row1,
+            row,
             textvariable=self.scaling_var,
             values=["density", "spectrum"],
             width=10,
@@ -233,80 +272,31 @@ class VoiceAnalyzer:
         )
         scaling_combo.pack(side=tk.LEFT, padx=5)
 
-        tk.Label(row1, text="mode:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
-        self.mode_var = tk.StringVar(value="magnitude")
-        mode_combo = ttk.Combobox(
-            row1,
-            textvariable=self.mode_var,
-            values=["magnitude", "psd", "phase", "angle", "complex"],
-            width=10,
-            state="readonly",
-        )
-        mode_combo.pack(side=tk.LEFT, padx=5)
-
-        # Вторая строка настроек
-        row2 = tk.Frame(settings_frame, bg="#2b2b2b")
-        row2.pack(fill=tk.X, pady=2)
-
-        tk.Label(row2, text="cmap:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
-        self.cmap_var = tk.StringVar(value="inferno")
-        cmap_combo = ttk.Combobox(
-            row2,
-            textvariable=self.cmap_var,
-            values=[
-                "inferno",
-                "viridis",
-                "plasma",
-                "magma",
-                "hot",
-                "cool",
-                "jet",
-                "gray",
-            ],
-            width=10,
-            state="readonly",
-        )
-        cmap_combo.pack(side=tk.LEFT, padx=5)
-
-        tk.Label(row2, text="shading:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
-        self.shading_var = tk.StringVar(value="gouraud")
-        shading_combo = ttk.Combobox(
-            row2,
-            textvariable=self.shading_var,
-            values=["gouraud", "flat", "nearest", "auto"],
-            width=10,
-            state="readonly",
-        )
-        shading_combo.pack(side=tk.LEFT, padx=5)
-
-        tk.Label(row2, text="noverlap (%):", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
-        self.noverlap_percent_var = tk.StringVar(value="90")
-        ttk.Entry(row2, textvariable=self.noverlap_percent_var, width=10).pack(
-            side=tk.LEFT, padx=5
-        )
-
-        tk.Label(row2, text="dB min:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
+        # Колонка 5: Диапазон дБ
+        col5 = tk.Frame(columns_container, bg="#2b2b2b")
+        col5.pack(side=tk.LEFT, padx=10)
+        
+        row = tk.Frame(col5, bg="#2b2b2b")
+        row.pack(fill=tk.X, pady=2)
+        tk.Label(row, text="Мин. дБ:", bg="#2b2b2b", fg="#ffffff", width=8, anchor="w").pack(side=tk.LEFT)
         self.db_min_var = tk.StringVar(value="-50")
-        ttk.Entry(row2, textvariable=self.db_min_var, width=10).pack(
-            side=tk.LEFT, padx=5
-        )
-
-        tk.Label(row2, text="dB max:", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
+        ttk.Entry(row, textvariable=self.db_min_var, width=12).pack(side=tk.LEFT, padx=5)
+        
+        row = tk.Frame(col5, bg="#2b2b2b")
+        row.pack(fill=tk.X, pady=2)
+        tk.Label(row, text="Макс. дБ:", bg="#2b2b2b", fg="#ffffff", width=8, anchor="w").pack(side=tk.LEFT)
         self.db_max_var = tk.StringVar(value="0")
-        ttk.Entry(row2, textvariable=self.db_max_var, width=10).pack(
-            side=tk.LEFT, padx=5
-        )
+        ttk.Entry(row, textvariable=self.db_max_var, width=12).pack(side=tk.LEFT, padx=5)
 
-        tk.Label(row2, text="smoothing (мс):", bg="#2b2b2b", fg="#ffffff").pack(side=tk.LEFT, padx=5)
-        self.smooth_window_var = tk.StringVar(value="5")
-        ttk.Entry(row2, textvariable=self.smooth_window_var, width=10).pack(
-            side=tk.LEFT, padx=5
-        )
-
-        # Кнопка обновления
+        # Кнопка обновления справа от колонок
         ttk.Button(
-            row2, text="Обновить графики", command=self._update_plots
-        ).pack(side=tk.LEFT, padx=20)
+            columns_container, text="Обновить графики", command=self._update_plots
+        ).pack(side=tk.LEFT, padx=10)
+
+        # Скрытые переменные для параметров, убранных из интерфейса
+        self.shading_var = tk.StringVar(value="gouraud")
+        self.cmap_var = tk.StringVar(value="inferno")
+        self.smooth_window_var = tk.StringVar(value="5")
 
     def _setup_defaults(self) -> None:
         """Устанавливает значения по умолчанию."""
