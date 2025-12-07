@@ -9,6 +9,7 @@ import os
 import sys
 from typing import Dict
 from tkinter import messagebox
+from pathlib import Path
 
 
 class SettingsManager:
@@ -35,18 +36,31 @@ class SettingsManager:
         Инициализирует менеджер настроек.
 
         Параметры:
-            config_file (str): Путь к файлу конфигурации.
+            config_file (str): Имя файла конфигурации.
         """
-        # Определяем путь к директории приложения
-        if getattr(sys, "frozen", False):
-            # Если приложение собрано в exe (PyInstaller)
-            application_path = os.path.dirname(sys.executable)
+        # Используем папку пользователя для сохранения настроек
+        # Это более безопасно и не требует прав администратора
+        if sys.platform == "win32":
+            # Windows: AppData\Local\VoiceAnalyzer
+            config_dir = Path(os.getenv("LOCALAPPDATA", "")) / "VoiceAnalyzer"
+        elif sys.platform == "darwin":
+            # macOS: ~/Library/Application Support/VoiceAnalyzer
+            config_dir = Path.home() / "Library" / "Application Support" / "VoiceAnalyzer"
         else:
-            # Если запущено как скрипт
-            application_path = os.path.dirname(os.path.abspath(__file__))
+            # Linux: ~/.config/VoiceAnalyzer
+            config_dir = Path.home() / ".config" / "VoiceAnalyzer"
 
-        # Формируем полный путь к файлу конфигурации
-        self.config_file = os.path.join(application_path, config_file)
+        # Создаем директорию, если её нет
+        try:
+            config_dir.mkdir(parents=True, exist_ok=True)
+        except (OSError, PermissionError):
+            # Если не удалось создать в папке пользователя, используем папку приложения
+            if getattr(sys, "frozen", False):
+                config_dir = Path(os.path.dirname(sys.executable))
+            else:
+                config_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+
+        self.config_file = config_dir / config_file
 
     def get_default_settings(self) -> Dict[str, str]:
         """
@@ -92,8 +106,24 @@ class SettingsManager:
             settings (Dict[str, str]): Словарь с настройками для сохранения.
         """
         try:
+            # Убеждаемся, что директория существует
+            self.config_file.parent.mkdir(parents=True, exist_ok=True)
+            
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(settings, f, indent=4, ensure_ascii=False)
+        except PermissionError:
+            messagebox.showerror(
+                "Ошибка доступа",
+                f"Антивирус или система безопасности блокирует сохранение настроек.\n\n"
+                f"Путь: {self.config_file}\n\n"
+                f"Решение:\n"
+                f"1. Добавьте приложение в исключения антивируса\n"
+                f"2. Запустите программу от имени администратора\n"
+                f"3. Проверьте права доступа к папке"
+            )
         except Exception as e:
-            messagebox.showerror("Ошибка", f"Не удалось сохранить настройки: {str(e)}")
+            messagebox.showerror(
+                "Ошибка",
+                f"Не удалось сохранить настройки: {str(e)}\n\nПуть: {self.config_file}"
+            )
 

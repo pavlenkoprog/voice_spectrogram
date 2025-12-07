@@ -4,6 +4,7 @@
 Объединяет все компоненты приложения: интерфейс, обработку аудио, графики и настройки.
 """
 
+import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import numpy as np
@@ -108,15 +109,36 @@ class VoiceAnalyzer:
 
         try:
             self.audio_processor.load_file(file_path)
-            self.ui_builder.update_file_label(f"Файл: {file_path.split('/')[-1]}")
-
+            # Используем os.path для корректной работы на всех ОС
+            filename = os.path.basename(file_path)
+            self.ui_builder.update_file_label(f"Файл: {filename}")
+            
             # Устанавливаем по умолчанию первую секунду
             self.vars["t_start"].set("0")
             self.vars["t_end"].set("1.0")
 
             self._update_plots()
+        except PermissionError:
+            messagebox.showerror(
+                "Ошибка доступа",
+                f"Антивирус или система безопасности блокирует доступ к файлу.\n\n"
+                f"Путь: {file_path}\n\n"
+                f"Решение:\n"
+                f"1. Добавьте приложение в исключения антивируса\n"
+                f"2. Проверьте права доступа к файлу\n"
+                f"3. Убедитесь, что файл не используется другим приложением"
+            )
+        except FileNotFoundError:
+            messagebox.showerror("Ошибка", f"Файл не найден: {file_path}")
         except Exception as e:
-            messagebox.showerror("Ошибка", f"Не удалось загрузить файл: {str(e)}")
+            messagebox.showerror(
+                "Ошибка",
+                f"Не удалось загрузить файл: {str(e)}\n\n"
+                f"Убедитесь, что:\n"
+                f"- Файл является корректным WAV файлом\n"
+                f"- Файл не поврежден\n"
+                f"- У вас есть права на чтение файла"
+            )
 
     def _get_parameters(self) -> Optional[Dict]:
         """
