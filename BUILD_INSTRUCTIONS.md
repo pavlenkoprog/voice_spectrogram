@@ -54,6 +54,19 @@ pyinstaller --name=VoiceAnalyzer --onefile --windowed --hidden-import=tkinter --
 pyinstaller --name=VoiceAnalyzer --onefile --windowed --hidden-import=tkinter --hidden-import=matplotlib.backends.backend_tkagg --hidden-import=scipy.signal --collect-all=matplotlib --collect-all=scipy main.py
 ```
 
+## Установка иконки приложения
+
+Для установки собственной иконки:
+
+1. **Windows:** Поместите файл `icon.ico` в корень проекта (рядом с `main.py`)
+2. **macOS:** Поместите файл `icon.icns` в корень проекта (рядом с `main.py`)
+
+Скрипты сборки автоматически обнаружат файл иконки и используют его. Если файл отсутствует, будет использована иконка по умолчанию.
+
+**Примечание:** 
+- Для Windows иконка должна быть в формате `.ico` (можно создать из PNG через онлайн-конвертеры)
+- Для macOS иконка должна быть в формате `.icns` (можно создать через `iconutil` на macOS)
+
 ## Примечания
 
 - Размер исполняемого файла будет около 100-200 МБ из-за включенных библиотек (numpy, scipy, matplotlib)
