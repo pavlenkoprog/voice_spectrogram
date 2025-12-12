@@ -48,6 +48,8 @@ class VoiceAnalyzer:
             self._get_audio_duration,
             self._save_spectrum,
             self._load_csv,
+            self._apply_csv_overlay,
+            self._remove_csv_overlay,
         )
 
         # Создание построителя графиков
@@ -57,6 +59,9 @@ class VoiceAnalyzer:
 
         # Хранение последних данных спектрограммы для сохранения
         self.last_spectrogram_data: Optional[Dict] = None
+
+        # Хранение наложенных данных из CSV
+        self.csv_overlay_data: Optional[Dict] = None
 
         # Загрузка настроек
         self._load_settings()
@@ -202,8 +207,9 @@ class VoiceAnalyzer:
                 "t_end": t_end,
             }
 
-            # Обновление графика спектрограммы
-            self.plotter.update_spectrogram(f, t, Sxx_dB, t_start, params)
+            # Обновление графика спектрограммы (с учетом наложенных данных)
+            overlay_data = self.csv_overlay_data if self.csv_overlay_data else None
+            self.plotter.update_spectrogram(f, t, Sxx_dB, t_start, params, overlay_data)
 
             # Вычисление огибающей громкости
             envelope = self.audio_processor.compute_volume_envelope(
@@ -284,7 +290,7 @@ class VoiceAnalyzer:
 
     def _load_csv(self) -> None:
         """
-        Загружает данные спектрограммы из CSV файла.
+        Загружает данные спектрограммы из CSV файла в переменную для наложения.
         """
         file_path = filedialog.askopenfilename(
             title="Выберите CSV файл со спектрограммой",
@@ -355,50 +361,21 @@ class VoiceAnalyzer:
             t_start = float(t[0])
             t_end = float(t[-1])
 
-            # Сохраняем данные
-            self.last_spectrogram_data = {
+            # Сохраняем данные для наложения
+            self.csv_overlay_data = {
                 "frequencies": f,
                 "times": t,
                 "spectrogram": Sxx_dB,
                 "t_start": t_start,
                 "t_end": t_end,
+                "filename": os.path.basename(file_path),
             }
 
-            # Обновляем настройки времени
-            self.vars["t_start"].set(str(t_start))
-            self.vars["t_end"].set(str(t_end))
-
-            # Обновляем максимальную частоту
-            max_freq = float(np.max(f))
-            self.vars["freq_limit"].set(str(int(max_freq)))
-
-            # Получаем параметры для отображения
-            params = self._get_parameters()
-            if params is None:
-                return
-
-            # Обновляем график спектрограммы
-            # Для отображения нужно вычислить относительные времена (t - t_start)
-            t_relative = t - t_start
-            self.plotter.update_spectrogram(f, t_relative, Sxx_dB, t_start, params)
-
-            # Очищаем график громкости (нет данных для него)
-            self.plotter.ax_volume.clear()
-            self.plotter.ax_volume.set_facecolor("#1e1e1e")
-            self.plotter.ax_volume.set_xlabel("Время (с)")
-            self.plotter.ax_volume.set_ylabel("Амплитуда")
-            self.plotter.ax_volume.set_title("График громкости (недоступен для CSV)")
-            self.plotter._configure_axes_style(self.plotter.ax_volume)
-            self.plotter.canvas_volume.draw()
-
-            # Выравнивание графиков
-            self.plotter.align_plots()
-
-            # Обновляем метку файла
-            filename = os.path.basename(file_path)
-            self.ui_builder.update_file_label(f"CSV: {filename}")
-
-            messagebox.showinfo("Успех", f"Спектрограмма загружена из файла:\n{file_path}")
+            messagebox.showinfo(
+                "Успех",
+                f"CSV файл загружен:\n{os.path.basename(file_path)}\n\n"
+                f"Используйте кнопку 'Наложить CSV поверх' для отображения.",
+            )
 
         except PermissionError:
             messagebox.showerror(
@@ -423,6 +400,76 @@ class VoiceAnalyzer:
                 f"- Файл был сохранен этой программой\n"
                 f"- Файл не поврежден"
             )
+
+    def _apply_csv_overlay(self) -> None:
+        """
+        Накладывает загруженные CSV данные поверх текущей спектрограммы.
+        """
+        if self.csv_overlay_data is None:
+            messagebox.showwarning(
+                "Предупреждение", "Нет загруженных CSV данных. Сначала загрузите CSV файл."
+            )
+            return
+
+        if self.last_spectrogram_data is None:
+            messagebox.showwarning(
+                "Предупреждение",
+                "Нет данных спектрограммы для наложения. Сначала загрузите WAV файл и обновите графики.",
+            )
+            return
+
+        # Обновляем графики с наложением
+        if self.audio_processor.data is not None and self.audio_processor.sample_rate is not None:
+            # Если есть загруженный аудио, обновляем графики
+            self._update_plots()
+        else:
+            # Если нет аудио, но есть данные спектрограммы, обновляем только график
+            params = self._get_parameters()
+            if params is None:
+                return
+
+            f = self.last_spectrogram_data["frequencies"]
+            t = self.last_spectrogram_data["times"]
+            Sxx_dB = self.last_spectrogram_data["spectrogram"]
+            t_start = self.last_spectrogram_data["t_start"]
+            t_relative = t - t_start
+
+            self.plotter.update_spectrogram(f, t_relative, Sxx_dB, t_start, params, self.csv_overlay_data)
+            self.plotter.align_plots()
+
+        messagebox.showinfo(
+            "Успех",
+            f"CSV данные наложены поверх спектрограммы:\n{self.csv_overlay_data['filename']}",
+        )
+
+    def _remove_csv_overlay(self) -> None:
+        """
+        Удаляет наложенные CSV данные.
+        """
+        if self.csv_overlay_data is None:
+            messagebox.showinfo("Информация", "Нет наложенных CSV данных для удаления.")
+            return
+
+        self.csv_overlay_data = None
+
+        # Обновляем графики без наложения
+        if self.audio_processor.data is not None and self.audio_processor.sample_rate is not None:
+            self._update_plots()
+        elif self.last_spectrogram_data is not None:
+            params = self._get_parameters()
+            if params is None:
+                return
+
+            f = self.last_spectrogram_data["frequencies"]
+            t = self.last_spectrogram_data["times"]
+            Sxx_dB = self.last_spectrogram_data["spectrogram"]
+            t_start = self.last_spectrogram_data["t_start"]
+            t_relative = t - t_start
+
+            self.plotter.update_spectrogram(f, t_relative, Sxx_dB, t_start, params, None)
+            self.plotter.align_plots()
+
+        messagebox.showinfo("Успех", "Наложение CSV данных удалено.")
 
 
 def main() -> None:

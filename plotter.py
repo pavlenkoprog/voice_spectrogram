@@ -79,7 +79,13 @@ class Plotter:
         ax.spines["left"].set_color("#ffffff")
 
     def update_spectrogram(
-        self, f: np.ndarray, t: np.ndarray, Sxx_dB: np.ndarray, t_start: float, params: Dict
+        self,
+        f: np.ndarray,
+        t: np.ndarray,
+        Sxx_dB: np.ndarray,
+        t_start: float,
+        params: Dict,
+        overlay_data: Optional[Dict] = None,
     ) -> None:
         """
         Обновляет график спектрограммы.
@@ -90,6 +96,7 @@ class Plotter:
             Sxx_dB (np.ndarray): Спектрограмма в дБ.
             t_start (float): Начало временного сегмента.
             params (Dict): Параметры визуализации.
+            overlay_data (Optional[Dict]): Данные для наложения поверх спектрограммы.
         """
         # Удаление старого colorbar
         if self.cbar_spectro is not None:
@@ -98,12 +105,61 @@ class Plotter:
 
         self.ax_spectro.clear()
         self.ax_spectro.set_facecolor("#1e1e1e")
+
+        # Отображение основной спектрограммы
         im = self.ax_spectro.pcolormesh(
-            t + t_start, f, Sxx_dB, shading=params["shading"], cmap=params["cmap"]
+            t + t_start, f, Sxx_dB, shading=params["shading"], cmap=params["cmap"], alpha=0.7
         )
+
+        # Наложение CSV данных поверх основной спектрограммы
+        if overlay_data is not None:
+            f_overlay = overlay_data["frequencies"]
+            t_overlay = overlay_data["times"]
+            Sxx_overlay = overlay_data["spectrogram"]
+
+            # Проверяем, пересекаются ли диапазоны времени
+            t_main = t + t_start
+            t_overlay_start = float(t_overlay[0])
+            t_overlay_end = float(t_overlay[-1])
+            t_main_start = float(t_main[0])
+            t_main_end = float(t_main[-1])
+
+            # Находим пересечение временных диапазонов
+            t_intersect_start = max(t_main_start, t_overlay_start)
+            t_intersect_end = min(t_main_end, t_overlay_end)
+
+            if t_intersect_start < t_intersect_end:
+                # Находим индексы для наложенных данных в пределах пересечения
+                mask_overlay = (t_overlay >= t_intersect_start) & (t_overlay <= t_intersect_end)
+                t_overlay_segment = t_overlay[mask_overlay]
+                idx_overlay_start = np.where(mask_overlay)[0][0]
+                idx_overlay_end = np.where(mask_overlay)[0][-1] + 1
+
+                if len(t_overlay_segment) > 0:
+                    # Получаем сегмент наложенных данных
+                    Sxx_overlay_segment = Sxx_overlay[:, idx_overlay_start:idx_overlay_end]
+
+                    # Отображаем наложенные данные с другим цветом и прозрачностью
+                    try:
+                        im_overlay = self.ax_spectro.pcolormesh(
+                            t_overlay_segment,
+                            f_overlay,
+                            Sxx_overlay_segment,
+                            shading=params["shading"],
+                            cmap="hot",
+                            alpha=0.5,
+                            vmin=params["db_min"],
+                            vmax=params["db_max"],
+                        )
+                    except Exception:
+                        pass  # Если отображение не удалось, просто пропускаем наложение
+
         self.ax_spectro.set_ylabel("Частота (Гц)")
         self.ax_spectro.set_xlabel("Время (с)")
-        self.ax_spectro.set_title("Спектрограмма")
+        title = "Спектрограмма"
+        if overlay_data is not None:
+            title += " (с наложением CSV)"
+        self.ax_spectro.set_title(title)
         self.ax_spectro.set_ylim(0, params["freq_limit"])
         self._configure_axes_style(self.ax_spectro)
 

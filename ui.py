@@ -32,6 +32,8 @@ class UIBuilder:
         get_audio_duration: Optional[Callable[[], float]] = None,
         save_spectrum_callback: Optional[Callable] = None,
         load_csv_callback: Optional[Callable] = None,
+        apply_csv_overlay_callback: Optional[Callable] = None,
+        remove_csv_overlay_callback: Optional[Callable] = None,
     ) -> Dict[str, tk.StringVar]:
         """
         Создает весь пользовательский интерфейс.
@@ -43,6 +45,8 @@ class UIBuilder:
             get_audio_duration (Optional[Callable[[], float]]): Функция для получения длительности аудио.
             save_spectrum_callback (Optional[Callable]): Функция для сохранения спектрограммы.
             load_csv_callback (Optional[Callable]): Функция для загрузки CSV файла.
+            apply_csv_overlay_callback (Optional[Callable]): Функция для наложения CSV данных.
+            remove_csv_overlay_callback (Optional[Callable]): Функция для удаления наложения CSV.
 
         Возвращает:
             Dict[str, tk.StringVar]: Словарь с переменными интерфейса.
@@ -54,7 +58,13 @@ class UIBuilder:
         self.root.rowconfigure(1, weight=1)
 
         # Верхняя панель с кнопкой загрузки
-        self._create_top_panel(load_file_callback, save_spectrum_callback, load_csv_callback)
+        self._create_top_panel(
+            load_file_callback,
+            save_spectrum_callback,
+            load_csv_callback,
+            apply_csv_overlay_callback,
+            remove_csv_overlay_callback,
+        )
 
         # Контейнер для графиков
         graphs_container = ttk.Frame(self.root)
@@ -70,6 +80,8 @@ class UIBuilder:
         load_file_callback: Callable,
         save_spectrum_callback: Optional[Callable] = None,
         load_csv_callback: Optional[Callable] = None,
+        apply_csv_overlay_callback: Optional[Callable] = None,
+        remove_csv_overlay_callback: Optional[Callable] = None,
     ) -> None:
         """
         Создает верхнюю панель с кнопками загрузки и сохранения.
@@ -78,6 +90,8 @@ class UIBuilder:
             load_file_callback (Callable): Функция для загрузки WAV файла.
             save_spectrum_callback (Optional[Callable]): Функция для сохранения спектрограммы.
             load_csv_callback (Optional[Callable]): Функция для загрузки CSV файла.
+            apply_csv_overlay_callback (Optional[Callable]): Функция для наложения CSV данных.
+            remove_csv_overlay_callback (Optional[Callable]): Функция для удаления наложения CSV.
         """
         top_frame = ttk.Frame(self.root, padding="5")
         top_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
@@ -89,6 +103,16 @@ class UIBuilder:
         if load_csv_callback:
             ttk.Button(
                 top_frame, text="Загрузить CSV файл", command=load_csv_callback
+            ).pack(side=tk.LEFT, padx=5)
+
+        if apply_csv_overlay_callback:
+            ttk.Button(
+                top_frame, text="Наложить CSV поверх", command=apply_csv_overlay_callback
+            ).pack(side=tk.LEFT, padx=5)
+
+        if remove_csv_overlay_callback:
+            ttk.Button(
+                top_frame, text="Убрать наложение", command=remove_csv_overlay_callback
             ).pack(side=tk.LEFT, padx=5)
 
         if save_spectrum_callback:
