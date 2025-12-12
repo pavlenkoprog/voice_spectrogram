@@ -99,6 +99,21 @@ class ThemeManager:
             selectbackground=[("readonly", "#606060")],
             bordercolor=[("focus", "#777777")],
         )
+        style.configure(
+            "TCheckbutton",
+            background=bg_color,
+            foreground=fg_color,
+            fieldbackground=bg_color,
+            indicatorbackground=bg_color,
+            bordercolor=border_color,
+            focuscolor="",
+        )
+        style.map(
+            "TCheckbutton",
+            background=[("active", bg_color), ("selected", bg_color)],
+            indicatorbackground=[("selected", "#606060"), ("!selected", bg_color)],
+            bordercolor=[("focus", "#777777")],
+        )
 
         # Темная тема для matplotlib
         plt.style.use("dark_background")
