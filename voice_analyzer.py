@@ -207,6 +207,9 @@ class VoiceAnalyzer:
                 "t_end": t_end,
             }
 
+            # Очищаем кэш наложения при изменении параметров
+            self.plotter.overlay_cache = None
+
             # Обновление графика спектрограммы (с учетом наложенных данных и состояния чекбокса)
             overlay_data = None
             if self.csv_overlay_data and hasattr(self.ui_builder, 'csv_overlay_var') and self.ui_builder.csv_overlay_var.get():
