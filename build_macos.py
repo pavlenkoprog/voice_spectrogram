@@ -13,7 +13,7 @@ import os
 import PyInstaller.__main__
 
 # Проверка наличия иконки
-icon_path = 'icon.icns'
+icon_path = 'icon.ico'
 if os.path.exists(icon_path):
     icon_arg = f'--icon={icon_path}'
 else:
