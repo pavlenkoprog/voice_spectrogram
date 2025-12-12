@@ -46,12 +46,16 @@ class VoiceAnalyzer:
             self._update_plots,
             self._reset_settings,
             self._get_audio_duration,
+            self._save_spectrum,
         )
 
         # Создание построителя графиков
         graphs_frame = tk.Frame(self.root)
         graphs_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
         self.plotter = Plotter(graphs_frame)
+
+        # Хранение последних данных спектрограммы для сохранения
+        self.last_spectrogram_data: Optional[Dict] = None
 
         # Загрузка настроек
         self._load_settings()
@@ -188,6 +192,15 @@ class VoiceAnalyzer:
             # Вычисление спектрограммы
             f, t, Sxx_dB = self.audio_processor.compute_spectrogram(data_segment, params)
 
+            # Сохранение данных для возможности экспорта
+            self.last_spectrogram_data = {
+                "frequencies": f,
+                "times": t + t_start,  # Времена с учетом смещения
+                "spectrogram": Sxx_dB,
+                "t_start": t_start,
+                "t_end": t_end,
+            }
+
             # Обновление графика спектрограммы
             self.plotter.update_spectrogram(f, t, Sxx_dB, t_start, params)
 
@@ -210,6 +223,63 @@ class VoiceAnalyzer:
 
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при построении графиков: {str(e)}")
+
+    def _save_spectrum(self) -> None:
+        """
+        Сохраняет данные спектрограммы в файл CSV.
+        """
+        if self.last_spectrogram_data is None:
+            messagebox.showwarning(
+                "Предупреждение",
+                "Нет данных для сохранения. Сначала загрузите файл и обновите графики."
+            )
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            title="Сохранить спектрограмму",
+            defaultextension=".csv",
+            filetypes=[
+                ("CSV files", "*.csv"),
+                ("Text files", "*.txt"),
+                ("All files", "*.*"),
+            ],
+        )
+
+        if not file_path:
+            return
+
+        try:
+            import csv
+
+            f = self.last_spectrogram_data["frequencies"]
+            t = self.last_spectrogram_data["times"]
+            Sxx_dB = self.last_spectrogram_data["spectrogram"]
+
+            with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
+                writer = csv.writer(csvfile)
+
+                # Заголовок: первая строка с частотами
+                header = ["Время/Частота"] + [f"{freq:.2f}" for freq in f]
+                writer.writerow(header)
+
+                # Данные: каждая строка - время, затем значения амплитуды для каждой частоты
+                for i, time_val in enumerate(t):
+                    row = [f"{time_val:.6f}"] + [f"{Sxx_dB[j, i]:.6f}" for j in range(len(f))]
+                    writer.writerow(row)
+
+            messagebox.showinfo("Успех", f"Спектрограмма сохранена в файл:\n{file_path}")
+        except PermissionError:
+            messagebox.showerror(
+                "Ошибка доступа",
+                f"Антивирус или система безопасности блокирует сохранение файла.\n\n"
+                f"Путь: {file_path}\n\n"
+                f"Решение:\n"
+                f"1. Добавьте приложение в исключения антивируса\n"
+                f"2. Проверьте права доступа к папке\n"
+                f"3. Выберите другую папку для сохранения"
+            )
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось сохранить файл: {str(e)}")
 
 
 def main() -> None:
