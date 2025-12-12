@@ -106,44 +106,90 @@ class Plotter:
         self.ax_spectro.clear()
         self.ax_spectro.set_facecolor("#1e1e1e")
 
-        # Отображение основной спектрограммы
-        im = self.ax_spectro.pcolormesh(
-            t + t_start, f, Sxx_dB, shading=params["shading"], cmap=params["cmap"], alpha=0.7
-        )
+        # Подготовка данных для отображения
+        Sxx_display = Sxx_dB.copy()
 
-        # Наложение CSV данных поверх основной спектрограммы
-        # Наложение начинается с начала основной спектрограммы, временные метки CSV игнорируются
+        # Наложение CSV данных: среднее значение с основной спектрограммой
+        # Изменяется только та часть графика, которая соответствует наложенным данным
         if overlay_data is not None:
             f_overlay = overlay_data["frequencies"]
             t_overlay = overlay_data["times"]  # Уже выровнено с началом основной спектрограммы
             Sxx_overlay = overlay_data["spectrogram"]
 
-            # Временная сетка для наложения начинается с начала основной спектрограммы
+            # Временная сетка для наложения
             t_main = t + t_start
-            t_overlay_aligned = t_main[: len(t_overlay)]  # Используем временную сетку основной спектрограммы
+            num_time_overlay = min(len(t_overlay), len(t_main))
 
-            if len(t_overlay_aligned) > 0:
-                # Отображаем наложенные данные с другим цветом и прозрачностью
+            if num_time_overlay > 0:
                 try:
-                    im_overlay = self.ax_spectro.pcolormesh(
-                        t_overlay_aligned,
-                        f_overlay,
-                        Sxx_overlay,
-                        shading=params["shading"],
-                        cmap="hot",
-                        alpha=0.5,
-                        vmin=params["db_min"],
-                        vmax=params["db_max"],
-                    )
+                    # Ограничиваем диапазон частот наложенных данных
+                    f_overlay_limited = f_overlay[f_overlay <= params["freq_limit"]]
+                    Sxx_overlay_limited = Sxx_overlay[: len(f_overlay_limited), :num_time_overlay]
+
+                    # Ограничиваем диапазон частот основной спектрограммы
+                    f_main_limited = f[f <= params["freq_limit"]]
+                    
+                    # Берем только ту часть основной спектрограммы, которая соответствует наложению
+                    Sxx_display_overlay_region = Sxx_display[: len(f_main_limited), :num_time_overlay]
+
+                    # Интерполируем наложенные данные на сетку основной спектрограммы
+                    if len(f_overlay_limited) > 0 and len(f_main_limited) > 0:
+                        from scipy.interpolate import griddata
+
+                        # Создаем сетки координат для интерполяции
+                        # Исходные точки (наложенные данные)
+                        t_overlay_grid, f_overlay_grid = np.meshgrid(
+                            t_overlay[:num_time_overlay], f_overlay_limited
+                        )
+                        points_overlay = np.column_stack([t_overlay_grid.ravel(), f_overlay_grid.ravel()])
+                        values_overlay = Sxx_overlay_limited.ravel()
+
+                        # Целевые точки (основная спектрограмма в области наложения)
+                        t_main_grid, f_main_grid = np.meshgrid(
+                            t_main[:num_time_overlay], f_main_limited
+                        )
+                        points_main = np.column_stack([t_main_grid.ravel(), f_main_grid.ravel()])
+
+                        # Интерполируем
+                        Sxx_overlay_interp = griddata(
+                            points_overlay,
+                            values_overlay,
+                            points_main,
+                            method="linear",
+                            fill_value=0.0,
+                        ).reshape((len(f_main_limited), num_time_overlay))
+
+                        # Вычисляем среднее значение между основной спектрограммой и наложенными данными
+                        # Наложенные данные умножаются на 0.5 перед усреднением
+                        Sxx_overlay_scaled = Sxx_overlay_interp * 0.5
+                        Sxx_display_overlay_region = (Sxx_display_overlay_region + Sxx_overlay_scaled) / 1.5
+
+                        # Заменяем только область наложения в основной спектрограмме
+                        Sxx_display[: len(f_main_limited), :num_time_overlay] = Sxx_display_overlay_region
+
                 except Exception:
-                    pass  # Если отображение не удалось, просто пропускаем наложение
+                    # Если интерполяция не удалась, пробуем простое усреднение при совпадении размеров
+                    try:
+                        if (
+                            Sxx_overlay.shape[0] == Sxx_display.shape[0]
+                            and num_time_overlay <= Sxx_display.shape[1]
+                        ):
+                            # Если размеры совпадают, вычисляем среднее значение
+                            Sxx_overlay_scaled = Sxx_overlay[:, :num_time_overlay] * 0.5
+                            Sxx_display[:, :num_time_overlay] = (
+                                Sxx_display[:, :num_time_overlay] + Sxx_overlay_scaled
+                            ) / 1.5
+                    except Exception:
+                        pass  # Если и это не удалось, просто пропускаем наложение
+
+        # Отображение результирующей спектрограммы
+        im = self.ax_spectro.pcolormesh(
+            t + t_start, f, Sxx_display, shading=params["shading"], cmap=params["cmap"]
+        )
 
         self.ax_spectro.set_ylabel("Частота (Гц)")
         self.ax_spectro.set_xlabel("Время (с)")
-        title = "Спектрограмма"
-        if overlay_data is not None:
-            title += " (с наложением CSV)"
-        self.ax_spectro.set_title(title)
+        self.ax_spectro.set_title("Спектрограмма")
         self.ax_spectro.set_ylim(0, params["freq_limit"])
         self._configure_axes_style(self.ax_spectro)
 
