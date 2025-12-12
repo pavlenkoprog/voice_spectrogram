@@ -31,6 +31,7 @@ class UIBuilder:
         reset_settings_callback: Callable,
         get_audio_duration: Optional[Callable[[], float]] = None,
         save_spectrum_callback: Optional[Callable] = None,
+        load_csv_callback: Optional[Callable] = None,
     ) -> Dict[str, tk.StringVar]:
         """
         Создает весь пользовательский интерфейс.
@@ -41,6 +42,7 @@ class UIBuilder:
             reset_settings_callback (Callable): Функция для сброса настроек.
             get_audio_duration (Optional[Callable[[], float]]): Функция для получения длительности аудио.
             save_spectrum_callback (Optional[Callable]): Функция для сохранения спектрограммы.
+            load_csv_callback (Optional[Callable]): Функция для загрузки CSV файла.
 
         Возвращает:
             Dict[str, tk.StringVar]: Словарь с переменными интерфейса.
@@ -52,7 +54,7 @@ class UIBuilder:
         self.root.rowconfigure(1, weight=1)
 
         # Верхняя панель с кнопкой загрузки
-        self._create_top_panel(load_file_callback, save_spectrum_callback)
+        self._create_top_panel(load_file_callback, save_spectrum_callback, load_csv_callback)
 
         # Контейнер для графиков
         graphs_container = ttk.Frame(self.root)
@@ -64,14 +66,18 @@ class UIBuilder:
         return self.vars
 
     def _create_top_panel(
-        self, load_file_callback: Callable, save_spectrum_callback: Optional[Callable] = None
+        self,
+        load_file_callback: Callable,
+        save_spectrum_callback: Optional[Callable] = None,
+        load_csv_callback: Optional[Callable] = None,
     ) -> None:
         """
-        Создает верхнюю панель с кнопкой загрузки.
+        Создает верхнюю панель с кнопками загрузки и сохранения.
 
         Параметры:
-            load_file_callback (Callable): Функция для загрузки файла.
+            load_file_callback (Callable): Функция для загрузки WAV файла.
             save_spectrum_callback (Optional[Callable]): Функция для сохранения спектрограммы.
+            load_csv_callback (Optional[Callable]): Функция для загрузки CSV файла.
         """
         top_frame = ttk.Frame(self.root, padding="5")
         top_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
@@ -79,6 +85,11 @@ class UIBuilder:
         ttk.Button(
             top_frame, text="Загрузить WAV файл", command=load_file_callback
         ).pack(side=tk.LEFT, padx=5)
+
+        if load_csv_callback:
+            ttk.Button(
+                top_frame, text="Загрузить CSV файл", command=load_csv_callback
+            ).pack(side=tk.LEFT, padx=5)
 
         if save_spectrum_callback:
             ttk.Button(

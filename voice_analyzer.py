@@ -47,6 +47,7 @@ class VoiceAnalyzer:
             self._reset_settings,
             self._get_audio_duration,
             self._save_spectrum,
+            self._load_csv,
         )
 
         # Создание построителя графиков
@@ -280,6 +281,148 @@ class VoiceAnalyzer:
             )
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось сохранить файл: {str(e)}")
+
+    def _load_csv(self) -> None:
+        """
+        Загружает данные спектрограммы из CSV файла.
+        """
+        file_path = filedialog.askopenfilename(
+            title="Выберите CSV файл со спектрограммой",
+            filetypes=[("CSV files", "*.csv"), ("Text files", "*.txt"), ("All files", "*.*")],
+        )
+
+        if not file_path:
+            return
+
+        try:
+            import csv
+
+            frequencies = []
+            times = []
+            spectrogram_data = []
+
+            with open(file_path, "r", encoding="utf-8") as csvfile:
+                reader = csv.reader(csvfile)
+
+                # Читаем заголовок с частотами
+                header = next(reader)
+                if len(header) < 2 or header[0] != "Время/Частота":
+                    raise ValueError(
+                        "Неверный формат файла. Ожидается заголовок 'Время/Частота' в первой колонке."
+                    )
+
+                # Извлекаем частоты из заголовка (начиная со второй колонки)
+                try:
+                    frequencies = [float(freq) for freq in header[1:]]
+                except ValueError as e:
+                    raise ValueError(f"Ошибка при чтении частот из заголовка: {str(e)}")
+
+                if len(frequencies) == 0:
+                    raise ValueError("Не найдены частоты в заголовке файла")
+
+                # Читаем данные
+                for row in reader:
+                    if len(row) < 2:
+                        continue
+
+                    try:
+                        # Первая колонка - время
+                        time_val = float(row[0])
+                        times.append(time_val)
+
+                        # Остальные колонки - значения амплитуды
+                        if len(row) - 1 != len(frequencies):
+                            raise ValueError(
+                                f"Несоответствие количества частот ({len(frequencies)}) "
+                                f"и значений в строке ({len(row) - 1})"
+                            )
+
+                        amplitudes = [float(val) for val in row[1:]]
+                        spectrogram_data.append(amplitudes)
+
+                    except ValueError as e:
+                        raise ValueError(f"Ошибка при чтении данных в строке {len(times) + 1}: {str(e)}")
+
+            if len(times) == 0:
+                raise ValueError("Файл не содержит данных")
+
+            # Преобразуем в numpy массивы
+            f = np.array(frequencies)
+            t = np.array(times)
+            Sxx_dB = np.array(spectrogram_data).T  # Транспонируем: строки = частоты, столбцы = время
+
+            # Определяем временной диапазон
+            t_start = float(t[0])
+            t_end = float(t[-1])
+
+            # Сохраняем данные
+            self.last_spectrogram_data = {
+                "frequencies": f,
+                "times": t,
+                "spectrogram": Sxx_dB,
+                "t_start": t_start,
+                "t_end": t_end,
+            }
+
+            # Обновляем настройки времени
+            self.vars["t_start"].set(str(t_start))
+            self.vars["t_end"].set(str(t_end))
+
+            # Обновляем максимальную частоту
+            max_freq = float(np.max(f))
+            self.vars["freq_limit"].set(str(int(max_freq)))
+
+            # Получаем параметры для отображения
+            params = self._get_parameters()
+            if params is None:
+                return
+
+            # Обновляем график спектрограммы
+            # Для отображения нужно вычислить относительные времена (t - t_start)
+            t_relative = t - t_start
+            self.plotter.update_spectrogram(f, t_relative, Sxx_dB, t_start, params)
+
+            # Очищаем график громкости (нет данных для него)
+            self.plotter.ax_volume.clear()
+            self.plotter.ax_volume.set_facecolor("#1e1e1e")
+            self.plotter.ax_volume.set_xlabel("Время (с)")
+            self.plotter.ax_volume.set_ylabel("Амплитуда")
+            self.plotter.ax_volume.set_title("График громкости (недоступен для CSV)")
+            self.plotter._configure_axes_style(self.plotter.ax_volume)
+            self.plotter.canvas_volume.draw()
+
+            # Выравнивание графиков
+            self.plotter.align_plots()
+
+            # Обновляем метку файла
+            filename = os.path.basename(file_path)
+            self.ui_builder.update_file_label(f"CSV: {filename}")
+
+            messagebox.showinfo("Успех", f"Спектрограмма загружена из файла:\n{file_path}")
+
+        except PermissionError:
+            messagebox.showerror(
+                "Ошибка доступа",
+                f"Антивирус или система безопасности блокирует доступ к файлу.\n\n"
+                f"Путь: {file_path}\n\n"
+                f"Решение:\n"
+                f"1. Добавьте приложение в исключения антивируса\n"
+                f"2. Проверьте права доступа к файлу\n"
+                f"3. Убедитесь, что файл не используется другим приложением"
+            )
+        except FileNotFoundError:
+            messagebox.showerror("Ошибка", f"Файл не найден: {file_path}")
+        except ValueError as e:
+            messagebox.showerror("Ошибка", f"Ошибка при чтении CSV файла: {str(e)}")
+        except Exception as e:
+            messagebox.showerror(
+                "Ошибка",
+                f"Не удалось загрузить файл: {str(e)}\n\n"
+                f"Убедитесь, что:\n"
+                f"- Файл является корректным CSV файлом\n"
+                f"- Файл был сохранен этой программой\n"
+                f"- Файл не поврежден"
+            )
 
 
 def main() -> None:
