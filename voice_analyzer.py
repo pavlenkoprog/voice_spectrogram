@@ -48,7 +48,7 @@ class VoiceAnalyzer:
             self._get_audio_duration,
             self._save_spectrum,
             self._apply_csv_overlay,
-            self._remove_csv_overlay,
+            self._toggle_csv_overlay,
         )
 
         # Создание построителя графиков
@@ -206,8 +206,10 @@ class VoiceAnalyzer:
                 "t_end": t_end,
             }
 
-            # Обновление графика спектрограммы (с учетом наложенных данных)
-            overlay_data = self.csv_overlay_data if self.csv_overlay_data else None
+            # Обновление графика спектрограммы (с учетом наложенных данных и состояния чекбокса)
+            overlay_data = None
+            if self.csv_overlay_data and hasattr(self.ui_builder, 'csv_overlay_var') and self.ui_builder.csv_overlay_var.get():
+                overlay_data = self.csv_overlay_data
             self.plotter.update_spectrogram(f, t, Sxx_dB, t_start, params, overlay_data)
 
             # Вычисление огибающей громкости
@@ -407,6 +409,11 @@ class VoiceAnalyzer:
                 "filename": os.path.basename(file_path),
             }
 
+            # Включаем чекбокс после загрузки CSV
+            if hasattr(self.ui_builder, 'csv_overlay_var'):
+                self.ui_builder.csv_overlay_var.set(True)
+                self.ui_builder.csv_overlay_checkbox.config(state="normal")
+
             # Обновляем графики с наложением
             if self.audio_processor.data is not None and self.audio_processor.sample_rate is not None:
                 # Если есть загруженный аудио, обновляем графики
@@ -422,8 +429,12 @@ class VoiceAnalyzer:
                 Sxx_dB_main = self.last_spectrogram_data["spectrogram"]
                 t_start = self.last_spectrogram_data["t_start"]
 
+                # Передаем данные только если чекбокс включен
+                overlay_data = None
+                if self.csv_overlay_data and hasattr(self.ui_builder, 'csv_overlay_var') and self.ui_builder.csv_overlay_var.get():
+                    overlay_data = self.csv_overlay_data
                 self.plotter.update_spectrogram(
-                    f_main, t_main_rel, Sxx_dB_main, t_start, params, self.csv_overlay_data
+                    f_main, t_main_rel, Sxx_dB_main, t_start, params, overlay_data
                 )
                 self.plotter.align_plots()
 
@@ -451,16 +462,11 @@ class VoiceAnalyzer:
                 f"- Файл не поврежден"
             )
 
-    def _remove_csv_overlay(self) -> None:
+    def _toggle_csv_overlay(self) -> None:
         """
-        Удаляет наложенные CSV данные.
+        Переключает отображение наложенных CSV данных.
         """
-        if self.csv_overlay_data is None:
-            return
-
-        self.csv_overlay_data = None
-
-        # Обновляем графики без наложения
+        # Обновляем графики с учетом состояния чекбокса
         if self.audio_processor.data is not None and self.audio_processor.sample_rate is not None:
             self._update_plots()
         elif self.last_spectrogram_data is not None:
@@ -474,7 +480,9 @@ class VoiceAnalyzer:
             t_start = self.last_spectrogram_data["t_start"]
             t_relative = t - t_start
 
-            self.plotter.update_spectrogram(f, t_relative, Sxx_dB, t_start, params, None)
+            # Передаем данные только если чекбокс включен
+            overlay_data = self.csv_overlay_data if self.ui_builder.csv_overlay_var.get() else None
+            self.plotter.update_spectrogram(f, t_relative, Sxx_dB, t_start, params, overlay_data)
             self.plotter.align_plots()
 
 

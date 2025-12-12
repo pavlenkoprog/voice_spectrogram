@@ -32,7 +32,7 @@ class UIBuilder:
         get_audio_duration: Optional[Callable[[], float]] = None,
         save_spectrum_callback: Optional[Callable] = None,
         apply_csv_overlay_callback: Optional[Callable] = None,
-        remove_csv_overlay_callback: Optional[Callable] = None,
+        toggle_csv_overlay_callback: Optional[Callable] = None,
     ) -> Dict[str, tk.StringVar]:
         """
         Создает весь пользовательский интерфейс.
@@ -44,7 +44,7 @@ class UIBuilder:
             get_audio_duration (Optional[Callable[[], float]]): Функция для получения длительности аудио.
             save_spectrum_callback (Optional[Callable]): Функция для сохранения спектрограммы.
             apply_csv_overlay_callback (Optional[Callable]): Функция для наложения CSV данных.
-            remove_csv_overlay_callback (Optional[Callable]): Функция для удаления наложения CSV.
+            toggle_csv_overlay_callback (Optional[Callable]): Функция для переключения отображения CSV данных.
 
         Возвращает:
             Dict[str, tk.StringVar]: Словарь с переменными интерфейса.
@@ -60,7 +60,7 @@ class UIBuilder:
             load_file_callback,
             save_spectrum_callback,
             apply_csv_overlay_callback,
-            remove_csv_overlay_callback,
+            toggle_csv_overlay_callback,
         )
 
         # Контейнер для графиков
@@ -77,7 +77,7 @@ class UIBuilder:
         load_file_callback: Callable,
         save_spectrum_callback: Optional[Callable] = None,
         apply_csv_overlay_callback: Optional[Callable] = None,
-        remove_csv_overlay_callback: Optional[Callable] = None,
+        toggle_csv_overlay_callback: Optional[Callable] = None,
     ) -> None:
         """
         Создает верхнюю панель с кнопками загрузки и сохранения.
@@ -86,7 +86,7 @@ class UIBuilder:
             load_file_callback (Callable): Функция для загрузки WAV файла.
             save_spectrum_callback (Optional[Callable]): Функция для сохранения спектрограммы.
             apply_csv_overlay_callback (Optional[Callable]): Функция для наложения CSV данных.
-            remove_csv_overlay_callback (Optional[Callable]): Функция для удаления наложения CSV.
+            toggle_csv_overlay_callback (Optional[Callable]): Функция для переключения отображения CSV данных.
         """
         top_frame = ttk.Frame(self.root, padding="5")
         top_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
@@ -100,10 +100,17 @@ class UIBuilder:
                 top_frame, text="Наложить CSV поверх", command=apply_csv_overlay_callback
             ).pack(side=tk.LEFT, padx=5)
 
-        if remove_csv_overlay_callback:
-            ttk.Button(
-                top_frame, text="Убрать наложение", command=remove_csv_overlay_callback
-            ).pack(side=tk.LEFT, padx=5)
+        if toggle_csv_overlay_callback:
+            # Чекбокс для включения/выключения отображения CSV данных
+            self.csv_overlay_var = tk.BooleanVar(value=False)
+            self.csv_overlay_checkbox = ttk.Checkbutton(
+                top_frame,
+                text="Показать CSV",
+                variable=self.csv_overlay_var,
+                command=toggle_csv_overlay_callback,
+                state="disabled",  # По умолчанию отключен, пока не загружены CSV данные
+            )
+            self.csv_overlay_checkbox.pack(side=tk.LEFT, padx=5)
 
         if save_spectrum_callback:
             ttk.Button(
