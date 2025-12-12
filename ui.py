@@ -31,7 +31,6 @@ class UIBuilder:
         reset_settings_callback: Callable,
         get_audio_duration: Optional[Callable[[], float]] = None,
         save_spectrum_callback: Optional[Callable] = None,
-        load_csv_callback: Optional[Callable] = None,
         apply_csv_overlay_callback: Optional[Callable] = None,
         remove_csv_overlay_callback: Optional[Callable] = None,
     ) -> Dict[str, tk.StringVar]:
@@ -44,7 +43,6 @@ class UIBuilder:
             reset_settings_callback (Callable): Функция для сброса настроек.
             get_audio_duration (Optional[Callable[[], float]]): Функция для получения длительности аудио.
             save_spectrum_callback (Optional[Callable]): Функция для сохранения спектрограммы.
-            load_csv_callback (Optional[Callable]): Функция для загрузки CSV файла.
             apply_csv_overlay_callback (Optional[Callable]): Функция для наложения CSV данных.
             remove_csv_overlay_callback (Optional[Callable]): Функция для удаления наложения CSV.
 
@@ -61,7 +59,6 @@ class UIBuilder:
         self._create_top_panel(
             load_file_callback,
             save_spectrum_callback,
-            load_csv_callback,
             apply_csv_overlay_callback,
             remove_csv_overlay_callback,
         )
@@ -79,7 +76,6 @@ class UIBuilder:
         self,
         load_file_callback: Callable,
         save_spectrum_callback: Optional[Callable] = None,
-        load_csv_callback: Optional[Callable] = None,
         apply_csv_overlay_callback: Optional[Callable] = None,
         remove_csv_overlay_callback: Optional[Callable] = None,
     ) -> None:
@@ -89,7 +85,6 @@ class UIBuilder:
         Параметры:
             load_file_callback (Callable): Функция для загрузки WAV файла.
             save_spectrum_callback (Optional[Callable]): Функция для сохранения спектрограммы.
-            load_csv_callback (Optional[Callable]): Функция для загрузки CSV файла.
             apply_csv_overlay_callback (Optional[Callable]): Функция для наложения CSV данных.
             remove_csv_overlay_callback (Optional[Callable]): Функция для удаления наложения CSV.
         """
@@ -99,11 +94,6 @@ class UIBuilder:
         ttk.Button(
             top_frame, text="Загрузить WAV файл", command=load_file_callback
         ).pack(side=tk.LEFT, padx=5)
-
-        if load_csv_callback:
-            ttk.Button(
-                top_frame, text="Загрузить CSV файл", command=load_csv_callback
-            ).pack(side=tk.LEFT, padx=5)
 
         if apply_csv_overlay_callback:
             ttk.Button(

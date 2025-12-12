@@ -112,47 +112,31 @@ class Plotter:
         )
 
         # Наложение CSV данных поверх основной спектрограммы
+        # Наложение начинается с начала основной спектрограммы, временные метки CSV игнорируются
         if overlay_data is not None:
             f_overlay = overlay_data["frequencies"]
-            t_overlay = overlay_data["times"]
+            t_overlay = overlay_data["times"]  # Уже выровнено с началом основной спектрограммы
             Sxx_overlay = overlay_data["spectrogram"]
 
-            # Проверяем, пересекаются ли диапазоны времени
+            # Временная сетка для наложения начинается с начала основной спектрограммы
             t_main = t + t_start
-            t_overlay_start = float(t_overlay[0])
-            t_overlay_end = float(t_overlay[-1])
-            t_main_start = float(t_main[0])
-            t_main_end = float(t_main[-1])
+            t_overlay_aligned = t_main[: len(t_overlay)]  # Используем временную сетку основной спектрограммы
 
-            # Находим пересечение временных диапазонов
-            t_intersect_start = max(t_main_start, t_overlay_start)
-            t_intersect_end = min(t_main_end, t_overlay_end)
-
-            if t_intersect_start < t_intersect_end:
-                # Находим индексы для наложенных данных в пределах пересечения
-                mask_overlay = (t_overlay >= t_intersect_start) & (t_overlay <= t_intersect_end)
-                t_overlay_segment = t_overlay[mask_overlay]
-                idx_overlay_start = np.where(mask_overlay)[0][0]
-                idx_overlay_end = np.where(mask_overlay)[0][-1] + 1
-
-                if len(t_overlay_segment) > 0:
-                    # Получаем сегмент наложенных данных
-                    Sxx_overlay_segment = Sxx_overlay[:, idx_overlay_start:idx_overlay_end]
-
-                    # Отображаем наложенные данные с другим цветом и прозрачностью
-                    try:
-                        im_overlay = self.ax_spectro.pcolormesh(
-                            t_overlay_segment,
-                            f_overlay,
-                            Sxx_overlay_segment,
-                            shading=params["shading"],
-                            cmap="hot",
-                            alpha=0.5,
-                            vmin=params["db_min"],
-                            vmax=params["db_max"],
-                        )
-                    except Exception:
-                        pass  # Если отображение не удалось, просто пропускаем наложение
+            if len(t_overlay_aligned) > 0:
+                # Отображаем наложенные данные с другим цветом и прозрачностью
+                try:
+                    im_overlay = self.ax_spectro.pcolormesh(
+                        t_overlay_aligned,
+                        f_overlay,
+                        Sxx_overlay,
+                        shading=params["shading"],
+                        cmap="hot",
+                        alpha=0.5,
+                        vmin=params["db_min"],
+                        vmax=params["db_max"],
+                    )
+                except Exception:
+                    pass  # Если отображение не удалось, просто пропускаем наложение
 
         self.ax_spectro.set_ylabel("Частота (Гц)")
         self.ax_spectro.set_xlabel("Время (с)")
