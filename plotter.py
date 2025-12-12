@@ -106,11 +106,13 @@ class Plotter:
         self.ax_spectro.clear()
         self.ax_spectro.set_facecolor("#1e1e1e")
 
-        # Подготовка данных для отображения
-        Sxx_display = Sxx_dB.copy()
+        # Отображение основной спектрограммы (без изменений)
+        im = self.ax_spectro.pcolormesh(
+            t + t_start, f, Sxx_dB, shading=params["shading"], cmap=params["cmap"]
+        )
 
-        # Наложение CSV данных: среднее значение с основной спектрограммой
-        # Изменяется только та часть графика, которая соответствует наложенным данным
+        # Визуальное наложение CSV данных другим цветом для сравнения
+        # CSV данные отображаются поверх основной спектрограммы без изменения исходных данных
         if overlay_data is not None:
             f_overlay = overlay_data["frequencies"]
             t_overlay = overlay_data["times"]  # Уже выровнено с началом основной спектрограммы
@@ -128,9 +130,6 @@ class Plotter:
 
                     # Ограничиваем диапазон частот основной спектрограммы
                     f_main_limited = f[f <= params["freq_limit"]]
-                    
-                    # Берем только ту часть основной спектрограммы, которая соответствует наложению
-                    Sxx_display_overlay_region = Sxx_display[: len(f_main_limited), :num_time_overlay]
 
                     # Интерполируем наложенные данные на сетку основной спектрограммы
                     if len(f_overlay_limited) > 0 and len(f_main_limited) > 0:
@@ -156,36 +155,48 @@ class Plotter:
                             values_overlay,
                             points_main,
                             method="linear",
-                            fill_value=0.0,
+                            fill_value=np.nan,
                         ).reshape((len(f_main_limited), num_time_overlay))
 
-                        # Вычисляем среднее значение между основной спектрограммой и наложенными данными
-                        # Наложенные данные умножаются на 0.5 перед усреднением
-                        Sxx_overlay_scaled = Sxx_overlay_interp * 0.5
-                        Sxx_display_overlay_region = (Sxx_display_overlay_region + Sxx_overlay_scaled) / 1.5
-
-                        # Заменяем только область наложения в основной спектрограмме
-                        Sxx_display[: len(f_main_limited), :num_time_overlay] = Sxx_display_overlay_region
+                        # Отображаем CSV данные другим цветом (красный/желтый) с прозрачностью
+                        # Маскируем NaN значения, чтобы не отображать области без данных
+                        mask = ~np.isnan(Sxx_overlay_interp)
+                        if np.any(mask):
+                            im_overlay = self.ax_spectro.pcolormesh(
+                                t_main[:num_time_overlay],
+                                f_main_limited,
+                                np.ma.masked_where(~mask, Sxx_overlay_interp),
+                                shading=params["shading"],
+                                cmap="hot",  # Красный/желтый colormap для CSV данных
+                                alpha=0.4,  # Полупрозрачность для видимости основной спектрограммы
+                                vmin=params["db_min"],
+                                vmax=params["db_max"],
+                            )
 
                 except Exception:
-                    # Если интерполяция не удалась, пробуем простое усреднение при совпадении размеров
+                    # Если интерполяция не удалась, пробуем простое отображение при совпадении размеров
                     try:
                         if (
-                            Sxx_overlay.shape[0] == Sxx_display.shape[0]
-                            and num_time_overlay <= Sxx_display.shape[1]
+                            len(f_overlay) == len(f)
+                            and num_time_overlay <= len(t_main)
+                            and np.allclose(f_overlay[: len(f)], f[: len(f_overlay)], atol=1.0)
                         ):
-                            # Если размеры совпадают, вычисляем среднее значение
-                            Sxx_overlay_scaled = Sxx_overlay[:, :num_time_overlay] * 0.5
-                            Sxx_display[:, :num_time_overlay] = (
-                                Sxx_display[:, :num_time_overlay] + Sxx_overlay_scaled
-                            ) / 1.5
+                            # Если размеры и частоты совпадают, отображаем напрямую
+                            f_overlay_limited = f_overlay[f_overlay <= params["freq_limit"]]
+                            mask = f_overlay_limited <= params["freq_limit"]
+                            if np.any(mask):
+                                im_overlay = self.ax_spectro.pcolormesh(
+                                    t_main[:num_time_overlay],
+                                    f_overlay_limited,
+                                    Sxx_overlay[: len(f_overlay_limited), :num_time_overlay],
+                                    shading=params["shading"],
+                                    cmap="hot",
+                                    alpha=0.4,  # Полупрозрачность для видимости основной спектрограммы
+                                    vmin=params["db_min"],
+                                    vmax=params["db_max"],
+                                )
                     except Exception:
                         pass  # Если и это не удалось, просто пропускаем наложение
-
-        # Отображение результирующей спектрограммы
-        im = self.ax_spectro.pcolormesh(
-            t + t_start, f, Sxx_display, shading=params["shading"], cmap=params["cmap"]
-        )
 
         self.ax_spectro.set_ylabel("Частота (Гц)")
         self.ax_spectro.set_xlabel("Время (с)")
