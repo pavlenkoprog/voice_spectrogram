@@ -272,8 +272,6 @@ class VoiceAnalyzer:
                 for i, time_val in enumerate(t):
                     row = [f"{time_val:.6f}"] + [f"{Sxx_dB[j, i]:.6f}" for j in range(len(f))]
                     writer.writerow(row)
-
-            messagebox.showinfo("Успех", f"Спектрограмма сохранена в файл:\n{file_path}")
         except PermissionError:
             messagebox.showerror(
                 "Ошибка доступа",
@@ -312,6 +310,7 @@ class VoiceAnalyzer:
 
             frequencies = []
             spectrogram_data = []
+            csv_times = []  # Временные метки из CSV для расчета длительности
 
             with open(file_path, "r", encoding="utf-8") as csvfile:
                 reader = csv.reader(csvfile)
@@ -332,12 +331,16 @@ class VoiceAnalyzer:
                 if len(frequencies) == 0:
                     raise ValueError("Не найдены частоты в заголовке файла")
 
-                # Читаем данные (временные метки игнорируем)
+                # Читаем данные (временные метки сохраняем для расчета длительности)
                 for row in reader:
                     if len(row) < 2:
                         continue
 
                     try:
+                        # Первая колонка - время (сохраняем для расчета длительности)
+                        time_val = float(row[0])
+                        csv_times.append(time_val)
+
                         # Остальные колонки - значения амплитуды
                         if len(row) - 1 != len(frequencies):
                             raise ValueError(
@@ -361,15 +364,40 @@ class VoiceAnalyzer:
             # Создаем временную сетку на основе основной спектрограммы
             # Временные метки CSV игнорируются, наложение начинается с начала основной спектрограммы
             t_main = self.last_spectrogram_data["times"]
-            num_time_points = Sxx_dB.shape[1]
+            num_time_points_csv = Sxx_dB.shape[1]
+            num_time_points_main = len(t_main)
 
-            # Если точек времени в CSV больше, чем в основной спектрограмме, обрезаем
-            if num_time_points > len(t_main):
-                Sxx_dB = Sxx_dB[:, : len(t_main)]
-                num_time_points = len(t_main)
+            # Проверяем, помещаются ли данные CSV в временную область основной спектрограммы
+            if num_time_points_csv > num_time_points_main:
+                # Вычисляем длительность временной области основной спектрограммы
+                t_main_duration = t_main[-1] - t_main[0]
+                # Вычисляем длительность CSV данных по временным меткам из файла
+                if len(csv_times) > 1:
+                    csv_duration = csv_times[-1] - csv_times[0]
+                else:
+                    # Если только одна точка, используем средний шаг основной спектрограммы
+                    if len(t_main) > 1:
+                        avg_time_step = t_main_duration / (num_time_points_main - 1)
+                        csv_duration = num_time_points_csv * avg_time_step
+                    else:
+                        csv_duration = t_main_duration
+
+                messagebox.showwarning(
+                    "Предупреждение",
+                    f"Временная область на графике слишком короткая для полного отображения CSV данных.\n\n"
+                    f"Длительность области графика: {t_main_duration:.3f} с\n"
+                    f"Длительность CSV данных: {csv_duration:.3f} с\n\n"
+                    f"Данные будут обрезаны и отображены только частично.\n"
+                    f"Увеличьте временной диапазон (t_end - t_start) для полного отображения.",
+                )
+
+            # Обрезаем данные CSV, если они не помещаются
+            if num_time_points_csv > num_time_points_main:
+                Sxx_dB = Sxx_dB[:, :num_time_points_main]
+                num_time_points_csv = num_time_points_main
 
             # Создаем временную сетку для наложения (начинается с начала основной спектрограммы)
-            t_overlay = t_main[:num_time_points]
+            t_overlay = t_main[:num_time_points_csv]
 
             # Сохраняем данные для наложения
             self.csv_overlay_data = {
@@ -398,11 +426,6 @@ class VoiceAnalyzer:
                     f_main, t_main_rel, Sxx_dB_main, t_start, params, self.csv_overlay_data
                 )
                 self.plotter.align_plots()
-
-            messagebox.showinfo(
-                "Успех",
-                f"CSV данные наложены поверх спектрограммы:\n{os.path.basename(file_path)}",
-            )
 
         except PermissionError:
             messagebox.showerror(
@@ -433,7 +456,6 @@ class VoiceAnalyzer:
         Удаляет наложенные CSV данные.
         """
         if self.csv_overlay_data is None:
-            messagebox.showinfo("Информация", "Нет наложенных CSV данных для удаления.")
             return
 
         self.csv_overlay_data = None
@@ -454,8 +476,6 @@ class VoiceAnalyzer:
 
             self.plotter.update_spectrogram(f, t_relative, Sxx_dB, t_start, params, None)
             self.plotter.align_plots()
-
-        messagebox.showinfo("Успех", "Наложение CSV данных удалено.")
 
 
 def main() -> None:
