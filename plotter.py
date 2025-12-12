@@ -106,13 +106,10 @@ class Plotter:
         self.ax_spectro.clear()
         self.ax_spectro.set_facecolor("#1e1e1e")
 
-        # Отображение основной спектрограммы (без изменений)
-        im = self.ax_spectro.pcolormesh(
-            t + t_start, f, Sxx_dB, shading=params["shading"], cmap=params["cmap"]
-        )
+        # Подготовка данных для отображения
+        Sxx_display = Sxx_dB.copy()
 
-        # Визуальное наложение CSV данных другим цветом для сравнения
-        # CSV данные отображаются поверх основной спектрограммы без изменения исходных данных
+        # Замена данных обработанного звука на данные из CSV в соответствующей области
         if overlay_data is not None:
             f_overlay = overlay_data["frequencies"]
             t_overlay = overlay_data["times"]  # Уже выровнено с началом основной спектрограммы
@@ -124,11 +121,8 @@ class Plotter:
 
             if num_time_overlay > 0:
                 try:
-                    # Ограничиваем диапазон частот наложенных данных
+                    # Ограничиваем диапазон частот
                     f_overlay_limited = f_overlay[f_overlay <= params["freq_limit"]]
-                    Sxx_overlay_limited = Sxx_overlay[: len(f_overlay_limited), :num_time_overlay]
-
-                    # Ограничиваем диапазон частот основной спектрограммы
                     f_main_limited = f[f <= params["freq_limit"]]
 
                     # Интерполируем наложенные данные на сетку основной спектрограммы
@@ -136,20 +130,18 @@ class Plotter:
                         from scipy.interpolate import griddata
 
                         # Создаем сетки координат для интерполяции
-                        # Исходные точки (наложенные данные)
                         t_overlay_grid, f_overlay_grid = np.meshgrid(
                             t_overlay[:num_time_overlay], f_overlay_limited
                         )
                         points_overlay = np.column_stack([t_overlay_grid.ravel(), f_overlay_grid.ravel()])
-                        values_overlay = Sxx_overlay_limited.ravel()
+                        values_overlay = Sxx_overlay[: len(f_overlay_limited), :num_time_overlay].ravel()
 
-                        # Целевые точки (основная спектрограмма в области наложения)
                         t_main_grid, f_main_grid = np.meshgrid(
                             t_main[:num_time_overlay], f_main_limited
                         )
                         points_main = np.column_stack([t_main_grid.ravel(), f_main_grid.ravel()])
 
-                        # Интерполируем
+                        # Интерполируем CSV данные на сетку основной спектрограммы
                         Sxx_overlay_interp = griddata(
                             points_overlay,
                             values_overlay,
@@ -158,45 +150,39 @@ class Plotter:
                             fill_value=np.nan,
                         ).reshape((len(f_main_limited), num_time_overlay))
 
-                        # Отображаем CSV данные другим цветом (красный/желтый) с прозрачностью
-                        # Маскируем NaN значения, чтобы не отображать области без данных
+                        # Заменяем данные основной спектрограммы на данные из CSV
                         mask = ~np.isnan(Sxx_overlay_interp)
                         if np.any(mask):
-                            im_overlay = self.ax_spectro.pcolormesh(
-                                t_main[:num_time_overlay],
-                                f_main_limited,
-                                np.ma.masked_where(~mask, Sxx_overlay_interp),
-                                shading=params["shading"],
-                                cmap="hot",  # Красный/желтый colormap для CSV данных
-                                alpha=0.4,  # Полупрозрачность для видимости основной спектрограммы
-                                vmin=params["db_min"],
-                                vmax=params["db_max"],
+                            # Заменяем только валидные значения
+                            num_freq = min(len(f_main_limited), Sxx_display.shape[0])
+                            num_time = min(num_time_overlay, Sxx_display.shape[1])
+                            Sxx_display[:num_freq, :num_time] = np.where(
+                                mask[:num_freq, :num_time],
+                                Sxx_overlay_interp[:num_freq, :num_time],
+                                Sxx_display[:num_freq, :num_time],
                             )
 
                 except Exception:
-                    # Если интерполяция не удалась, пробуем простое отображение при совпадении размеров
+                    # Если интерполяция не удалась, пробуем простое копирование при совпадении размеров
                     try:
                         if (
                             len(f_overlay) == len(f)
-                            and num_time_overlay <= len(t_main)
+                            and num_time_overlay <= Sxx_display.shape[1]
                             and np.allclose(f_overlay[: len(f)], f[: len(f_overlay)], atol=1.0)
                         ):
-                            # Если размеры и частоты совпадают, отображаем напрямую
+                            # Если размеры и частоты совпадают, просто заменяем
                             f_overlay_limited = f_overlay[f_overlay <= params["freq_limit"]]
-                            mask = f_overlay_limited <= params["freq_limit"]
-                            if np.any(mask):
-                                im_overlay = self.ax_spectro.pcolormesh(
-                                    t_main[:num_time_overlay],
-                                    f_overlay_limited,
-                                    Sxx_overlay[: len(f_overlay_limited), :num_time_overlay],
-                                    shading=params["shading"],
-                                    cmap="hot",
-                                    alpha=0.4,  # Полупрозрачность для видимости основной спектрограммы
-                                    vmin=params["db_min"],
-                                    vmax=params["db_max"],
-                                )
+                            num_freq = min(len(f_overlay_limited), Sxx_display.shape[0])
+                            Sxx_display[:num_freq, :num_time_overlay] = Sxx_overlay[
+                                :num_freq, :num_time_overlay
+                            ]
                     except Exception:
-                        pass  # Если и это не удалось, просто пропускаем наложение
+                        pass  # Если и это не удалось, просто пропускаем замену
+
+        # Отображение спектрограммы (с замененными данными из CSV, если они есть)
+        im = self.ax_spectro.pcolormesh(
+            t + t_start, f, Sxx_display, shading=params["shading"], cmap=params["cmap"]
+        )
 
         self.ax_spectro.set_ylabel("Частота (Гц)")
         self.ax_spectro.set_xlabel("Время (с)")
