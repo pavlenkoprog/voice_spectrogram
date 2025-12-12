@@ -5,6 +5,7 @@
 """
 
 import os
+import datetime
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import numpy as np
@@ -465,25 +466,43 @@ class VoiceAnalyzer:
     def _toggle_csv_overlay(self) -> None:
         """
         Переключает отображение наложенных CSV данных.
+        Просто перерисовывает график без пересчета спектрограммы.
         """
-        # Обновляем графики с учетом состояния чекбокса
-        if self.audio_processor.data is not None and self.audio_processor.sample_rate is not None:
-            self._update_plots()
-        elif self.last_spectrogram_data is not None:
-            params = self._get_parameters()
-            if params is None:
-                return
+        print("toggle_csv_overlay", datetime.datetime.now())
 
-            f = self.last_spectrogram_data["frequencies"]
-            t = self.last_spectrogram_data["times"]
-            Sxx_dB = self.last_spectrogram_data["spectrogram"]
-            t_start = self.last_spectrogram_data["t_start"]
-            t_relative = t - t_start
+        if self.last_spectrogram_data is None:
+            return
 
-            # Передаем данные только если чекбокс включен
-            overlay_data = self.csv_overlay_data if self.ui_builder.csv_overlay_var.get() else None
-            self.plotter.update_spectrogram(f, t_relative, Sxx_dB, t_start, params, overlay_data)
-            self.plotter.align_plots()
+        print("get_parameters", datetime.datetime.now())
+        # Получаем параметры для отображения
+        params = self._get_parameters()
+        if params is None:
+            return
+        print("params", datetime.datetime.now())
+
+        # Используем уже вычисленные данные, не пересчитываем спектрограмму
+        f = self.last_spectrogram_data["frequencies"]
+        t = self.last_spectrogram_data["times"]
+        Sxx_dB = self.last_spectrogram_data["spectrogram"]
+        t_start = self.last_spectrogram_data["t_start"]
+        t_relative = t - t_start
+        print("data", datetime.datetime.now())
+
+        # Передаем данные только если чекбокс включен
+        overlay_data = None
+        if (
+            self.csv_overlay_data
+            and hasattr(self.ui_builder, "csv_overlay_var")
+            and self.ui_builder.csv_overlay_var.get()
+        ):
+            overlay_data = self.csv_overlay_data
+        print("get overlay_data", datetime.datetime.now())
+
+        # Просто перерисовываем график с уже имеющимися данными
+        self.plotter.update_spectrogram(f, t_relative, Sxx_dB, t_start, params, overlay_data)
+        print("update_spectrogram", datetime.datetime.now())
+        self.plotter.align_plots()
+        print("align_plots", datetime.datetime.now())
 
 
 def main() -> None:
