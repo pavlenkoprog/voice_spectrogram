@@ -150,6 +150,93 @@ class VoiceAnalyzer:
                 f"- У вас есть права на чтение файла"
             )
 
+    def _validate_all_fields(self) -> Optional[list]:
+        """
+        Проверяет все поля на корректность значений.
+
+        Возвращает:
+            Optional[list]: Список строк с описанием ошибок или None если ошибок нет.
+        """
+        errors = []
+
+        # Проверка времени начала
+        try:
+            t_start = float(self.vars["t_start"].get())
+            if t_start < 0:
+                errors.append("Начало времени должно быть >= 0")
+        except ValueError:
+            errors.append("Начало времени должно быть числом")
+
+        # Проверка времени конца
+        try:
+            t_end = float(self.vars["t_end"].get())
+            try:
+                t_start = float(self.vars["t_start"].get())
+                if t_end <= t_start:
+                    errors.append("Конец времени должен быть больше начала времени")
+            except ValueError:
+                pass  # Ошибка начала уже добавлена
+
+            # Проверка что конец не превышает длительность аудио
+            if self.audio_processor.data is not None and self.audio_processor.sample_rate is not None:
+                max_duration = len(self.audio_processor.data) / self.audio_processor.sample_rate
+                if t_end > max_duration:
+                    errors.append(f"Конец времени ({t_end:.3f} с) превышает длительность аудио ({max_duration:.3f} с)")
+        except ValueError:
+            errors.append("Конец времени должен быть числом")
+
+        # Проверка размера окна
+        try:
+            nperseg = int(self.vars["nperseg"].get())
+            if nperseg <= 0:
+                errors.append("Размер окна должен быть положительным числом")
+        except ValueError:
+            errors.append("Размер окна должен быть целым числом")
+
+        # Проверка максимальной частоты
+        try:
+            freq_limit = float(self.vars["freq_limit"].get())
+            if freq_limit <= 0:
+                errors.append("Максимальная частота должна быть положительным числом")
+        except ValueError:
+            errors.append("Максимальная частота должна быть числом")
+
+        # Проверка перекрытия
+        try:
+            noverlap_percent = float(self.vars["noverlap_percent"].get())
+            if noverlap_percent < 0 or noverlap_percent > 99:
+                errors.append("Перекрытие должно быть в диапазоне от 0 до 99%")
+        except ValueError:
+            errors.append("Перекрытие должно быть числом")
+
+        # Проверка минимального дБ
+        try:
+            db_min = float(self.vars["db_min"].get())
+            try:
+                db_max = float(self.vars["db_max"].get())
+                if db_min >= db_max:
+                    errors.append("Минимальный дБ должен быть меньше максимального дБ")
+            except ValueError:
+                pass  # Ошибка максимума уже будет добавлена
+        except ValueError:
+            errors.append("Минимальный дБ должен быть числом")
+
+        # Проверка максимального дБ
+        try:
+            db_max = float(self.vars["db_max"].get())
+        except ValueError:
+            errors.append("Максимальный дБ должен быть числом")
+
+        # Проверка окна сглаживания
+        try:
+            smooth_window = float(self.vars["smooth_window"].get())
+            if smooth_window < 0:
+                errors.append("Окно сглаживания должно быть >= 0")
+        except ValueError:
+            errors.append("Окно сглаживания должно быть числом")
+
+        return errors if errors else None
+
     def _get_parameters(self) -> Optional[Dict]:
         """
         Получает параметры из интерфейса.
@@ -180,6 +267,13 @@ class VoiceAnalyzer:
     def _update_plots(self) -> None:
         """Обновляет графики спектрограммы и громкости."""
         if self.audio_processor.data is None or self.audio_processor.sample_rate is None:
+            return
+
+        # Проверка всех полей перед обновлением
+        errors = self._validate_all_fields()
+        if errors:
+            error_message = "Обнаружены некорректные значения в настройках:\n\n" + "\n".join(f"• {error}" for error in errors)
+            messagebox.showerror("Ошибка валидации", error_message)
             return
 
         params = self._get_parameters()

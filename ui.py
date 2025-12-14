@@ -274,22 +274,6 @@ class UIBuilder:
         self.vars[var_name] = tk.StringVar(value=default_value)
         entry = ttk.Entry(row, textvariable=self.vars[var_name], width=12)
 
-        # Настройка валидации
-        if validation_type:
-            validate_cmd = self.root.register(
-                lambda value, vtype=validation_type, vname=var_name: self._validate_input(
-                    value, vtype, vname
-                )
-            )
-            entry.config(validate="key", validatecommand=(validate_cmd, "%P"))
-            # Валидация при потере фокуса
-            entry.bind(
-                "<FocusOut>",
-                lambda e, vtype=validation_type, vname=var_name: self._validate_on_focus_out(
-                    vtype, vname
-                ),
-            )
-
         entry.pack(side=tk.LEFT, padx=5)
 
     def _validate_input(self, value: str, validation_type: str, var_name: str) -> bool:
