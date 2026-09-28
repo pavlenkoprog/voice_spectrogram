@@ -264,6 +264,7 @@ class Plotter:
         self.ax_volume.set_ylabel("Амплитуда")
         self.ax_volume.set_title("График громкости")
         self.ax_volume.grid(True, alpha=0.3, color="#555555")
+        self._set_volume_limits(self.ax_volume, time, envelope)
         self._configure_axes_style(self.ax_volume)
 
         self._export_volume = {
@@ -341,6 +342,7 @@ class Plotter:
         ax_volume.set_ylabel("Амплитуда")
         ax_volume.set_title("График громкости")
         ax_volume.grid(True, alpha=0.4, color="#b0b0b0")
+        self._set_volume_limits(ax_volume, volume["time"], volume["envelope"])
         self._configure_export_axes(ax_volume)
 
         fig.subplots_adjust(left=0.08, right=0.92, top=0.95, bottom=0.08, hspace=0.45)
@@ -351,6 +353,36 @@ class Plotter:
         )
 
         fig.savefig(file_path, format="jpeg", dpi=100, facecolor="white", edgecolor="white")
+
+    def _set_volume_limits(self, ax, time: np.ndarray, envelope: np.ndarray) -> None:
+        """
+        Ставит шкалы ровно по диапазону времени и громкости, без полей matplotlib.
+
+        Параметры:
+            ax: Оси графика громкости.
+            time (np.ndarray): Временная шкала.
+            envelope (np.ndarray): Огибающая громкости.
+        """
+        if time.size >= 2:
+            x0 = float(time[0])
+            x1 = float(time[-1])
+            if np.isfinite(x0) and np.isfinite(x1) and x0 != x1:
+                ax.set_xlim(x0, x1)
+
+        if envelope.size == 0:
+            return
+
+        ymin = float(np.min(envelope))
+        ymax = float(np.max(envelope))
+        if not np.isfinite(ymin) or not np.isfinite(ymax):
+            return
+
+        if ymin == ymax:
+            pad = 1.0 if ymin == 0 else abs(ymin) * 0.05
+            ax.set_ylim(ymin - pad, ymax + pad)
+            return
+
+        ax.set_ylim(ymin, ymax)
 
     def _configure_export_axes(self, ax) -> None:
         """
