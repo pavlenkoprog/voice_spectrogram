@@ -30,8 +30,11 @@ PyInstaller.__main__.run([
     '--hidden-import=matplotlib.backends.backend_tkagg',
     '--hidden-import=scipy.signal',
     '--hidden-import=numpy',
+    '--hidden-import=PIL',
+    '--hidden-import=PIL.Image',
     '--collect-all=matplotlib',
     '--collect-all=scipy',
+    '--collect-all=PIL',
     '--noconfirm',
     '--clean',
 ])
