@@ -273,7 +273,7 @@ class Plotter:
         }
 
     def align_plots(self) -> None:
-        """Выравнивает графики по ширине."""
+        """Выравнивает графики по ширине и по шкале времени."""
         # Обновление обоих canvas
         self.fig_spectro.tight_layout()
         self.fig_volume.tight_layout()
@@ -284,9 +284,31 @@ class Plotter:
         self.ax_volume.set_position(
             [spectro_pos.x0, volume_pos.y0, spectro_pos.width, volume_pos.height]
         )
+        self._sync_time_limits()
 
         self.canvas_spectro.draw()
         self.canvas_volume.draw()
+
+    def _sync_time_limits(self) -> None:
+        """
+        Ставит спектрограмме и громкости один и тот же интервал времени.
+
+        Спектрограмма считается по центрам окон и без этой правки короче отрезка.
+        """
+        if self._export_volume is None:
+            return
+
+        time = self._export_volume["time"]
+        if time.size < 2:
+            return
+
+        t0 = float(time[0])
+        t1 = float(time[-1])
+        if not np.isfinite(t0) or not np.isfinite(t1) or t0 == t1:
+            return
+
+        self.ax_spectro.set_xlim(t0, t1)
+        self.ax_volume.set_xlim(t0, t1)
 
     def has_export_data(self) -> bool:
         """
@@ -351,6 +373,11 @@ class Plotter:
         ax_volume.set_position(
             [spectro_pos.x0, volume_pos.y0, spectro_pos.width, volume_pos.height]
         )
+        if volume["time"].size >= 2:
+            t0 = float(volume["time"][0])
+            t1 = float(volume["time"][-1])
+            ax_spectro.set_xlim(t0, t1)
+            ax_volume.set_xlim(t0, t1)
 
         fig.savefig(file_path, format="jpeg", dpi=100, facecolor="white", edgecolor="white")
 
