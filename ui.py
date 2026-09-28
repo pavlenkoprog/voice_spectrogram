@@ -162,17 +162,17 @@ class UIBuilder:
         # Создание колонок с настройками
         self._create_settings_columns(columns_container)
 
-        # Кнопки
+        # Колонка с кнопками: одна над другой
         buttons_frame = tk.Frame(columns_container, bg="#2b2b2b")
-        buttons_frame.pack(side=tk.LEFT, padx=10)
+        buttons_frame.pack(side=tk.LEFT, padx=10, anchor="n")
 
         ttk.Button(
             buttons_frame, text="Обновить графики", command=update_plots_callback
-        ).pack(side=tk.LEFT, padx=5)
+        ).pack(fill=tk.X, pady=2)
 
         ttk.Button(
             buttons_frame, text="Сбросить настройки", command=reset_settings_callback
-        ).pack(side=tk.LEFT, padx=5)
+        ).pack(fill=tk.X, pady=2)
 
     def _create_settings_columns(self, parent: tk.Frame) -> None:
         """
@@ -241,9 +241,20 @@ class UIBuilder:
             col5, "Макс. дБ:", "db_max", "0", width=8, validation_type="db_max"
         )
 
+        # Колонка 6: Палитра спектрограммы
+        col6 = tk.Frame(parent, bg="#2b2b2b")
+        col6.pack(side=tk.LEFT, padx=10)
+        self._create_setting_combo(
+            col6,
+            "Палитра:",
+            "cmap",
+            "inferno",
+            ["inferno", "magma", "plasma", "viridis", "turbo", "jet", "hot", "gray"],
+            width=10,
+        )
+
         # Скрытые переменные
         self.vars["shading"] = tk.StringVar(value="gouraud")
-        self.vars["cmap"] = tk.StringVar(value="inferno")
         self.vars["smooth_window"] = tk.StringVar(value="5")
 
     def _create_setting_row(
