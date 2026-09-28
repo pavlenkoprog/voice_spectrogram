@@ -33,6 +33,7 @@ class UIBuilder:
         save_spectrum_callback: Optional[Callable] = None,
         apply_csv_overlay_callback: Optional[Callable] = None,
         toggle_csv_overlay_callback: Optional[Callable] = None,
+        save_image_callback: Optional[Callable] = None,
     ) -> Dict[str, tk.StringVar]:
         """
         Создает весь пользовательский интерфейс.
@@ -45,6 +46,7 @@ class UIBuilder:
             save_spectrum_callback (Optional[Callable]): Функция для сохранения спектрограммы.
             apply_csv_overlay_callback (Optional[Callable]): Функция для наложения CSV данных.
             toggle_csv_overlay_callback (Optional[Callable]): Функция для переключения отображения CSV данных.
+            save_image_callback (Optional[Callable]): Функция для сохранения изображения графиков.
 
         Возвращает:
             Dict[str, tk.StringVar]: Словарь с переменными интерфейса.
@@ -61,6 +63,7 @@ class UIBuilder:
             save_spectrum_callback,
             apply_csv_overlay_callback,
             toggle_csv_overlay_callback,
+            save_image_callback,
         )
 
         # Контейнер для графиков
@@ -78,6 +81,7 @@ class UIBuilder:
         save_spectrum_callback: Optional[Callable] = None,
         apply_csv_overlay_callback: Optional[Callable] = None,
         toggle_csv_overlay_callback: Optional[Callable] = None,
+        save_image_callback: Optional[Callable] = None,
     ) -> None:
         """
         Создает верхнюю панель с кнопками загрузки и сохранения.
@@ -87,6 +91,7 @@ class UIBuilder:
             save_spectrum_callback (Optional[Callable]): Функция для сохранения спектрограммы.
             apply_csv_overlay_callback (Optional[Callable]): Функция для наложения CSV данных.
             toggle_csv_overlay_callback (Optional[Callable]): Функция для переключения отображения CSV данных.
+            save_image_callback (Optional[Callable]): Функция для сохранения изображения графиков.
         """
         top_frame = ttk.Frame(self.root, padding="5")
         top_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
@@ -127,6 +132,11 @@ class UIBuilder:
             width=3,
         )
         help_button.pack(side=tk.RIGHT, padx=5)
+
+        if save_image_callback:
+            ttk.Button(
+                top_frame, text="Сохранить изображение", command=save_image_callback
+            ).pack(side=tk.RIGHT, padx=5)
 
     def _create_settings_panel(
         self, update_plots_callback: Callable, reset_settings_callback: Callable

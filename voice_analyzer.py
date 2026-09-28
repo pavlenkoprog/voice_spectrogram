@@ -50,6 +50,7 @@ class VoiceAnalyzer:
             self._save_spectrum,
             self._apply_csv_overlay,
             self._toggle_csv_overlay,
+            self._save_image,
         )
 
         # Создание построителя графиков
@@ -384,6 +385,42 @@ class VoiceAnalyzer:
             )
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось сохранить файл: {str(e)}")
+
+    def _save_image(self) -> None:
+        """Сохраняет спектрограмму и график громкости в JPG фиксированного размера."""
+        if not self.plotter.has_export_data():
+            messagebox.showwarning(
+                "Предупреждение",
+                "Нет данных для сохранения. Сначала загрузите файл и обновите графики.",
+            )
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            title="Сохранить изображение",
+            defaultextension=".jpg",
+            filetypes=[
+                ("JPEG files", "*.jpg"),
+                ("All files", "*.*"),
+            ],
+        )
+
+        if not file_path:
+            return
+
+        try:
+            self.plotter.save_view_image(file_path)
+        except PermissionError:
+            messagebox.showerror(
+                "Ошибка доступа",
+                f"Антивирус или система безопасности блокирует сохранение файла.\n\n"
+                f"Путь: {file_path}\n\n"
+                f"Решение:\n"
+                f"1. Добавьте приложение в исключения антивируса\n"
+                f"2. Проверьте права доступа к папке\n"
+                f"3. Выберите другую папку для сохранения"
+            )
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось сохранить изображение: {str(e)}")
 
     def _apply_csv_overlay(self) -> None:
         """

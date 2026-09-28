@@ -25,6 +25,9 @@ class Plotter:
         self.cbar_spectro: Optional[object] = None
         # Кэш для интерполированных данных наложения
         self.overlay_cache: Optional[Dict] = None
+        # Данные последних графиков для сохранения в файл фиксированного размера
+        self._export_spectro: Optional[Dict] = None
+        self._export_volume: Optional[Dict] = None
 
         # Создание графиков
         self._create_plots()
@@ -231,6 +234,16 @@ class Plotter:
         self.cbar_spectro.ax.yaxis.set_tick_params(colors="#ffffff")
         self.cbar_spectro.outline.set_edgecolor("#ffffff")
 
+        self._export_spectro = {
+            "t": np.array(t, copy=True),
+            "f": np.array(f, copy=True),
+            "Sxx": np.array(Sxx_display, copy=True),
+            "t_start": t_start,
+            "freq_limit": params["freq_limit"],
+            "shading": params["shading"],
+            "cmap": params["cmap"],
+        }
+
     def update_volume(
         self, time: np.ndarray, envelope: np.ndarray, t_start: float, t_end: float
     ) -> None:
@@ -253,6 +266,11 @@ class Plotter:
         self.ax_volume.grid(True, alpha=0.3, color="#555555")
         self._configure_axes_style(self.ax_volume)
 
+        self._export_volume = {
+            "time": np.array(time, copy=True),
+            "envelope": np.array(envelope, copy=True),
+        }
+
     def align_plots(self) -> None:
         """Выравнивает графики по ширине."""
         # Обновление обоих canvas
@@ -268,4 +286,83 @@ class Plotter:
 
         self.canvas_spectro.draw()
         self.canvas_volume.draw()
+
+    def has_export_data(self) -> bool:
+        """
+        Проверяет, построены ли оба графика для сохранения.
+
+        Возвращает:
+            bool: True, если есть данные спектрограммы и громкости.
+        """
+        return self._export_spectro is not None and self._export_volume is not None
+
+    def save_view_image(self, file_path: str) -> None:
+        """
+        Строит спектрограмму и график громкости заново и сохраняет их в JPG.
+
+        Размер файла фиксированный и не зависит от размера окна.
+        Фон белый.
+
+        Параметры:
+            file_path (str): Путь к JPG-файлу.
+        """
+        if not self.has_export_data():
+            raise ValueError(
+                "Нет данных для сохранения. Сначала загрузите файл и обновите графики."
+            )
+
+        fig = Figure(figsize=(12, 8), dpi=100, facecolor="white")
+        grid = fig.add_gridspec(2, 1, height_ratios=[3, 1])
+        ax_spectro = fig.add_subplot(grid[0], facecolor="white")
+        ax_volume = fig.add_subplot(grid[1], facecolor="white")
+
+        spectro = self._export_spectro
+        image = ax_spectro.pcolormesh(
+            spectro["t"] + spectro["t_start"],
+            spectro["f"],
+            spectro["Sxx"],
+            shading=spectro["shading"],
+            cmap=spectro["cmap"],
+        )
+        ax_spectro.set_ylabel("Частота (Гц)")
+        ax_spectro.set_xlabel("Время (с)")
+        ax_spectro.set_title("Спектрограмма")
+        ax_spectro.set_ylim(0, spectro["freq_limit"])
+        self._configure_export_axes(ax_spectro)
+
+        colorbar = fig.colorbar(image, ax=ax_spectro)
+        colorbar.set_label("Амплитуда (dB)", color="black")
+        colorbar.ax.yaxis.set_tick_params(colors="black")
+        colorbar.outline.set_edgecolor("black")
+
+        volume = self._export_volume
+        ax_volume.plot(volume["time"], volume["envelope"], linewidth=1, color="#008000")
+        ax_volume.set_xlabel("Время (с)")
+        ax_volume.set_ylabel("Амплитуда")
+        ax_volume.set_title("График громкости")
+        ax_volume.grid(True, alpha=0.4, color="#b0b0b0")
+        self._configure_export_axes(ax_volume)
+
+        fig.subplots_adjust(left=0.08, right=0.92, top=0.95, bottom=0.08, hspace=0.45)
+        spectro_pos = ax_spectro.get_position()
+        volume_pos = ax_volume.get_position()
+        ax_volume.set_position(
+            [spectro_pos.x0, volume_pos.y0, spectro_pos.width, volume_pos.height]
+        )
+
+        fig.savefig(file_path, format="jpeg", dpi=100, facecolor="white", edgecolor="white")
+
+    def _configure_export_axes(self, ax) -> None:
+        """
+        Настраивает чёрные оси и подписи для изображения на белом фоне.
+
+        Параметры:
+            ax: Оси matplotlib для настройки.
+        """
+        ax.tick_params(colors="black")
+        ax.xaxis.label.set_color("black")
+        ax.yaxis.label.set_color("black")
+        ax.title.set_color("black")
+        for spine in ax.spines.values():
+            spine.set_color("black")
 
