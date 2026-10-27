@@ -26,6 +26,7 @@ class SettingsManager:
         "scaling": "density",
         "db_min": "-50",
         "db_max": "0",
+        "db_absolute": "0",
         "shading": "gouraud",
         "cmap": "inferno",
         "smooth_window": "5",

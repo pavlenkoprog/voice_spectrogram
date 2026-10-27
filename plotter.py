@@ -217,9 +217,20 @@ class Plotter:
                             Sxx_display[:num_freq, :num_time] = display_segment
 
         # Отображение спектрограммы (с замененными данными из CSV, если они есть)
-        im = self.ax_spectro.pcolormesh(
-            t + t_start, f, Sxx_display, shading=params["shading"], cmap=params["cmap"]
+        db_absolute = bool(params.get("db_absolute")) and params.get("mode") not in (
+            "phase",
+            "angle",
         )
+        colorbar_label = "Уровень (dB)" if db_absolute else "Амплитуда (dB)"
+        mesh_kwargs = {
+            "shading": params["shading"],
+            "cmap": params["cmap"],
+        }
+        # В режиме «от 0 в плюс» пик стоит на верхней границе, тихий край — на нижней.
+        if db_absolute:
+            mesh_kwargs["vmin"] = params["db_min"]
+            mesh_kwargs["vmax"] = params["db_max"]
+        im = self.ax_spectro.pcolormesh(t + t_start, f, Sxx_display, **mesh_kwargs)
 
         self.ax_spectro.set_ylabel("Частота (Гц)")
         self.ax_spectro.set_xlabel("Время (с)")
@@ -228,9 +239,9 @@ class Plotter:
         self._configure_axes_style(self.ax_spectro)
 
         self.cbar_spectro = self.fig_spectro.colorbar(
-            im, ax=self.ax_spectro, label="Амплитуда (dB)"
+            im, ax=self.ax_spectro, label=colorbar_label
         )
-        self.cbar_spectro.set_label("Амплитуда (dB)", color="#ffffff")
+        self.cbar_spectro.set_label(colorbar_label, color="#ffffff")
         self.cbar_spectro.ax.yaxis.set_tick_params(colors="#ffffff")
         self.cbar_spectro.outline.set_edgecolor("#ffffff")
 
@@ -242,6 +253,9 @@ class Plotter:
             "freq_limit": params["freq_limit"],
             "shading": params["shading"],
             "cmap": params["cmap"],
+            "colorbar_label": colorbar_label,
+            "vmin": params["db_min"] if db_absolute else None,
+            "vmax": params["db_max"] if db_absolute else None,
         }
 
     def update_volume(
@@ -340,12 +354,18 @@ class Plotter:
         ax_volume = fig.add_subplot(grid[1], facecolor="white")
 
         spectro = self._export_spectro
+        mesh_kwargs = {
+            "shading": spectro["shading"],
+            "cmap": spectro["cmap"],
+        }
+        if spectro.get("vmin") is not None and spectro.get("vmax") is not None:
+            mesh_kwargs["vmin"] = spectro["vmin"]
+            mesh_kwargs["vmax"] = spectro["vmax"]
         image = ax_spectro.pcolormesh(
             spectro["t"] + spectro["t_start"],
             spectro["f"],
             spectro["Sxx"],
-            shading=spectro["shading"],
-            cmap=spectro["cmap"],
+            **mesh_kwargs,
         )
         ax_spectro.set_ylabel("Частота (Гц)")
         ax_spectro.set_xlabel("Время (с)")
@@ -354,7 +374,7 @@ class Plotter:
         self._configure_export_axes(ax_spectro)
 
         colorbar = fig.colorbar(image, ax=ax_spectro)
-        colorbar.set_label("Амплитуда (dB)", color="black")
+        colorbar.set_label(spectro.get("colorbar_label", "Амплитуда (dB)"), color="black")
         colorbar.ax.yaxis.set_tick_params(colors="black")
         colorbar.outline.set_edgecolor("black")
 

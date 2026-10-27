@@ -259,6 +259,7 @@ class VoiceAnalyzer:
                 "noverlap_percent": float(self.vars["noverlap_percent"].get()),
                 "db_min": float(self.vars["db_min"].get()),
                 "db_max": float(self.vars["db_max"].get()),
+                "db_absolute": bool(int(self.vars["db_absolute"].get())),
                 "smooth_window_ms": float(self.vars["smooth_window"].get()),
             }
         except ValueError as e:

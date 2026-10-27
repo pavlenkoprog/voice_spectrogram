@@ -279,10 +279,46 @@ class UIBuilder:
             ],
             width=10,
         )
+        self.vars["db_absolute"] = tk.IntVar(value=0)
+        ttk.Checkbutton(
+            col6,
+            text="От 0 в плюс\n(абс. значение)",
+            variable=self.vars["db_absolute"],
+            command=self._on_db_scale_toggle,
+        ).pack(anchor="w", pady=(6, 0))
 
         # Скрытые переменные
         self.vars["shading"] = tk.StringVar(value="gouraud")
         self.vars["smooth_window"] = tk.StringVar(value="5")
+
+    def _on_db_scale_toggle(self) -> None:
+        """
+        Переключает пределы дБ под выбранную шкалу.
+
+        Выключено: пик фрагмента это 0 дБ, ниже — отрицательные значения.
+        Включено: та же полоса сигнала, но тихий край это 0, а пик — верх шкалы.
+        """
+        try:
+            db_min = float(self.vars["db_min"].get())
+            db_max = float(self.vars["db_max"].get())
+        except (KeyError, ValueError):
+            return
+
+        absolute = bool(int(self.vars["db_absolute"].get()))
+        if absolute and db_min < 0 and db_max <= 0:
+            self.vars["db_min"].set(self._format_db(abs(db_max)))
+            self.vars["db_max"].set(self._format_db(abs(db_min)))
+        elif not absolute and db_min >= 0 and db_max > db_min:
+            self.vars["db_min"].set(self._format_db(-db_max))
+            self.vars["db_max"].set(self._format_db(-db_min))
+
+    @staticmethod
+    def _format_db(value: float) -> str:
+        """Форматирует значение дБ без лишней дробной части."""
+        rounded = round(value)
+        if abs(value - rounded) < 1e-9:
+            return str(int(rounded))
+        return str(value)
 
     def _create_setting_row(
         self,

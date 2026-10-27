@@ -84,6 +84,7 @@ class AudioProcessor:
         nperseg = params["nperseg"]
         noverlap = int(nperseg * params["noverlap_percent"] / 100)
         freq_limit = params["freq_limit"]
+        db_absolute = bool(params.get("db_absolute"))
 
         # Вычисление спектрограммы
         f, t, Sxx = spectrogram(
@@ -101,15 +102,17 @@ class AudioProcessor:
         f = f[mask]
         Sxx = Sxx[mask, :]
 
-        # Перевод в dB с нормализацией относительно максимума
+        # Перевод в dB относительно самого громкого бина фрагмента: пик = 0, тише — меньше нуля.
+        # Абсолютный режим не зеркалит эту шкалу и не сдвигает её за ноль.
+        # Та же полоса (верхние N дБ сигнала) переносится в плюс: тихий край = мин. дБ, пик = макс. дБ.
         if params["mode"] != "phase" and params["mode"] != "angle":
-            # Нормализуем относительно максимума, чтобы максимум был 0 дБ
             Sxx_max = np.max(Sxx)
             if Sxx_max > 0:
-                Sxx_normalized = Sxx / Sxx_max
-                Sxx_dB = 20 * np.log10(Sxx_normalized + 1e-10)
+                Sxx_dB = 20 * np.log10(Sxx / Sxx_max + 1e-10)
             else:
                 Sxx_dB = 20 * np.log10(Sxx + 1e-10)
+            if db_absolute:
+                Sxx_dB = Sxx_dB + params["db_max"]
             Sxx_dB = np.clip(Sxx_dB, params["db_min"], params["db_max"])
         else:
             Sxx_dB = Sxx
