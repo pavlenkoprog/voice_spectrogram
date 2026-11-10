@@ -6,6 +6,11 @@
 
 import tkinter as tk
 from tkinter import ttk
+import matplotlib
+
+# TkAgg совпадает с окном tkinter. На Mac бэкенд macosx требует
+# Python-framework и падает и при сборке, и при запуске приложения.
+matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 
 try:

@@ -8,7 +8,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Установить Python с Tkinter
         run: brew install python@3.12 python-tk@3.12
@@ -25,13 +25,15 @@ jobs:
       - name: Сборка
         run: |
           source venv/bin/activate
+          export MPLBACKEND=TkAgg
           python build_macos.py
+          xattr -cr dist/VoiceAnalyzer.app
           codesign --force --deep --sign - dist/VoiceAnalyzer.app
           ditto -c -k --keepParent dist/VoiceAnalyzer.app VoiceAnalyzer-macos.zip
           ls -lh VoiceAnalyzer-macos.zip
 
       - name: Артефакт
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: VoiceAnalyzer-macos
           path: VoiceAnalyzer-macos.zip
