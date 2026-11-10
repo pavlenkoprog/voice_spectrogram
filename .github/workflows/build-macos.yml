@@ -1,0 +1,39 @@
+name: Сборка macOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Установить Python с Tkinter
+        run: brew install python@3.12 python-tk@3.12
+
+      - name: Зависимости
+        run: |
+          PY="$(brew --prefix)/opt/python@3.12/bin/python3.12"
+          "$PY" -c "import tkinter; print('Tk', tkinter.TkVersion)"
+          "$PY" -m venv venv
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Сборка
+        run: |
+          source venv/bin/activate
+          python build_macos.py
+          codesign --force --deep --sign - dist/VoiceAnalyzer.app
+          ditto -c -k --keepParent dist/VoiceAnalyzer.app VoiceAnalyzer-macos.zip
+          ls -lh VoiceAnalyzer-macos.zip
+
+      - name: Артефакт
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoiceAnalyzer-macos
+          path: VoiceAnalyzer-macos.zip
+          if-no-files-found: error
+          retention-days: 30
